@@ -40,3 +40,4 @@
     {{ $cert := (coalesce $certName $vhostCert) }}
 
     {{ $cert }} [{{$ssl_option}}]
+{{ end }}
