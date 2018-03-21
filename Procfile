@@ -1,2 +1,2 @@
-dockergen: docker-gen -watch -notify "nginx -s reload" /app/nginx.tmpl /etc/nginx/conf.d/default.conf
-nginx: nginx
+dockergen: docker-gen -config /app/docker-gen.conf -keep-blank-lines
+haproxy: haproxy -W -db -f /etc/haproxy/haproxy.cnf -p /var/run/haproxy.pid

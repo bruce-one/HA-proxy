@@ -1,0 +1,25 @@
+global
+    log 127.0.0.1 local3
+defaults
+  	mode http
+  	log global
+  	option http-server-close
+  	option httplog
+	option dontlognull
+  	option redispatch
+  	option forwardfor
+  	retries 3
+  	backlog 4096
+  	timeout client          20s
+    timeout client-fin      20s
+  	timeout connect         5s
+  	timeout server          20s
+  	timeout tunnel          15m
+  	timeout http-keep-alive 30s
+  	timeout http-request    10s
+  	timeout queue           5s
+  	timeout tarpit          60s
+  	default-server inter 3s rise 2 fall 3
+
+listen http
+    bind :80 tfo defer-accept

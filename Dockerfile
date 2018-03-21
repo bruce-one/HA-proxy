@@ -1,18 +1,11 @@
-FROM nginx:1.13
-LABEL maintainer="Jason Wilder mail@jasonwilder.com"
+FROM haproxy:1.8-alpine
+LABEL maintainer="Max Sum max@lolyculture.com"
 
 # Install wget and install/updates certificates
-RUN apt-get update \
- && apt-get install -y -q --no-install-recommends \
-    ca-certificates \
-    wget \
- && apt-get clean \
- && rm -r /var/lib/apt/lists/*
-
-
-# Configure Nginx and apply fix for very long server names
-RUN echo "daemon off;" >> /etc/nginx/nginx.conf \
- && sed -i 's/worker_processes  1/worker_processes  auto/' /etc/nginx/nginx.conf
+RUN apk add --no-cache --virtual .run-deps \
+    ca-certificates bash wget openssl \
+    && update-ca-certificates \
+    && mv /usr/local/etc/haproxy /etc/
 
 # Install Forego
 ADD https://github.com/jwilder/forego/releases/download/v0.16.1/forego /usr/local/bin/forego
@@ -20,18 +13,17 @@ RUN chmod u+x /usr/local/bin/forego
 
 ENV DOCKER_GEN_VERSION 0.7.3
 
-RUN wget https://github.com/jwilder/docker-gen/releases/download/$DOCKER_GEN_VERSION/docker-gen-linux-amd64-$DOCKER_GEN_VERSION.tar.gz \
- && tar -C /usr/local/bin -xvzf docker-gen-linux-amd64-$DOCKER_GEN_VERSION.tar.gz \
- && rm /docker-gen-linux-amd64-$DOCKER_GEN_VERSION.tar.gz
-
-COPY network_internal.conf /etc/nginx/
+RUN wget --quiet https://github.com/jwilder/docker-gen/releases/download/$DOCKER_GEN_VERSION/docker-gen-alpine-linux-amd64-$DOCKER_GEN_VERSION.tar.gz \
+ && tar -C /usr/local/bin -xvzf docker-gen-alpine-linux-amd64-$DOCKER_GEN_VERSION.tar.gz \
+ && rm /docker-gen-alpine-linux-amd64-$DOCKER_GEN_VERSION.tar.gz
 
 COPY . /app/
+RUN mv /app/haproxy.cnf /etc/haproxy/
 WORKDIR /app/
 
 ENV DOCKER_HOST unix:///tmp/docker.sock
 
-VOLUME ["/etc/nginx/certs", "/etc/nginx/dhparam"]
+VOLUME ["/etc/haproxy/certs"]
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["forego", "start", "-r"]

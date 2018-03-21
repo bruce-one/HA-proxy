@@ -120,22 +120,6 @@ If you would like the reverse proxy to connect to your backend using HTTPS inste
 
 > Note: If you use `VIRTUAL_PROTO=https` and your backend container exposes port 80 and 443, `nginx-proxy` will use HTTPS on port 80.  This is almost certainly not what you want, so you should also include `VIRTUAL_PORT=443`.
 
-### uWSGI Backends
-
-If you would like to connect to uWSGI backend, set `VIRTUAL_PROTO=uwsgi` on the
-backend container. Your backend container should then listen on a port rather
-than a socket and expose that port.
-
-### FastCGI Backends
- 
-If you would like to connect to FastCGI backend, set `VIRTUAL_PROTO=fastcgi` on the
-backend container. Your backend container should then listen on a port rather
-than a socket and expose that port.
- 
-### FastCGI Filr Root Directory
-
-If you use fastcgi,you can set `VIRTUAL_ROOT=xxx`  for your root directory
-
 
 ### Default Host
 
