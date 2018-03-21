@@ -1,5 +1,5 @@
 global
-    log 127.0.0.1 local3
+    log /dev/log local0
 defaults
   	mode http
   	log global

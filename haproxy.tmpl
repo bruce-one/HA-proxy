@@ -1,5 +1,5 @@
 global
-    log 127.0.0.1 local3
+    log /dev/log local0
     tune.ssl.default-dh-param {{ or $.Env.DHPARAM_BITS 2048 }}
     {{/* Get the SSL_POLICY defined by container, falling back to "Mozilla-Intermediate" */}}
     {{ $ssl_policy := or $.Env.SSL_POLICY "Mozilla-Intermediate" }}
@@ -31,8 +31,8 @@ global
     ssl-default-bind-options ssl-min-ver TLSv1.0
     ssl-default-bind-ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:DHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:AES128-GCM-SHA256:AES128-SHA256:AES128-SHA:AES256-GCM-SHA384:AES256-SHA256:AES256-SHA:DHE-DSS-AES128-SHA'
     {{ end }}
-    # default dhparam
     {{ if (exists "/etc/haproxy/certs/dhparam.pem") }}
+    # Default dhparam
     ssl-dh-param-file /etc/haproxy/certs/dhparam.pem
     {{ end }}
 defaults
@@ -60,7 +60,7 @@ defaults
 
 {{ define "backend" }}
     {{/* Get the VIRTUAL_PROTO defined by container */}}
-    {{ $proto := trim (or .Container.Env.VIRTUAL_PROTO "http")) }}
+    {{ $proto := trim (or .Container.Env.VIRTUAL_PROTO "http") }}
     {{ $bk_ssl := when (eq $proto "https") "ssl" "" }}
     {{ if .Address }}
         {{/* If we got the containers from swarm and this container's port is published to host, use host IP:PORT */}}
@@ -124,6 +124,7 @@ backend bk_{{ $host_name }}
 
         {{ range $knownNetwork := $CurrentContainer.Networks }}
             {{ range $containerNetwork := $container.Networks }}
+                {{$knownNetwork.Name}}
                 {{ if (and (ne $containerNetwork.Name "ingress") (or (eq $knownNetwork.Name $containerNetwork.Name) (eq $knownNetwork.Name "host"))) }}
                     ## Can be connected with "{{ $containerNetwork.Name }}" network
 
@@ -170,7 +171,7 @@ frontend http
 
     {{/* Use the cert specified on the container or fallback to the best vhost match */}}
     {{ $cert := (coalesce $certName $vhostCert) }}
-    {{ $certExist := (exists (printf "/etc/haproxy/certs/%s.pem" $cert)) || (exists (printf "/etc/haproxy/certs/%s.pem.ecdsa" $cert)) || (exists (printf "/etc/haproxy/certs/%s.pem.rsa" $cert)) || (exists (printf "/etc/haproxy/certs/%s.pem.dsa" $cert)) }}
+    {{ $certExist := or (exists (printf "/etc/haproxy/certs/%s.pem" $cert)) (exists (printf "/etc/haproxy/certs/%s.pem.ecdsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.pem.rsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.pem.dsa" $cert)) }}
 
     {{ $is_https := (and (ne $https_method "nohttps") (ne $cert "") $certExist ) }}
 
