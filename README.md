@@ -1,15 +1,16 @@
-![nginx 1.13](https://img.shields.io/badge/nginx-1.13-brightgreen.svg) ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg) [![Build Status](https://travis-ci.org/jwilder/nginx-proxy.svg?branch=master)](https://travis-ci.org/jwilder/nginx-proxy) [![](https://img.shields.io/docker/stars/jwilder/nginx-proxy.svg)](https://hub.docker.com/r/jwilder/nginx-proxy 'DockerHub') [![](https://img.shields.io/docker/pulls/jwilder/nginx-proxy.svg)](https://hub.docker.com/r/jwilder/nginx-proxy 'DockerHub')
+![HAProxy 1.8](https://img.shields.io/badge/HAProxy-1.8-brightgreen.svg) ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg) [![](https://img.shields.io/docker/stars/max-sum/ha-proxy.svg)](https://hub.docker.com/r/max-sum/ha-proxy 'DockerHub') [![](https://img.shields.io/docker/pulls/max-sum/ha-proxy.svg)](https://hub.docker.com/r/max-sum/ha-proxy 'DockerHub')
 
+This is HAProxy flavor of [nginx-proxy][1]. Please look through the readme before you use, there is some difference in configuration from nginx-proxy, which will be shown in bold font.
 
-nginx-proxy sets up a container running nginx and [docker-gen][1].  docker-gen generates reverse proxy configs for nginx and reloads nginx when containers are started and stopped.
+HA-proxy sets up a container running HAProxy and [docker-gen][2].  docker-gen generates reverse proxy configs for HAProxy and reloads HAProxy when containers are started and stopped.
 
-See [Automated Nginx Reverse Proxy for Docker][2] for why you might want to use this.
+See [Automated Nginx Reverse Proxy for Docker][3] for why you might want to use this.
 
 ### Usage
 
 To run it:
 
-    $ docker run -d -p 80:80 -v /var/run/docker.sock:/tmp/docker.sock:ro jwilder/nginx-proxy
+    $ docker run -d -p 80:80 -v /var/run/docker.sock:/tmp/docker.sock:ro max-sum/ha-proxy
 
 Then start any containers you want proxied with an env var `VIRTUAL_HOST=subdomain.youdomain.com`
 
@@ -17,32 +18,26 @@ Then start any containers you want proxied with an env var `VIRTUAL_HOST=subdoma
 
 The containers being proxied must [expose](https://docs.docker.com/engine/reference/run/#expose-incoming-ports) the port to be proxied, either by using the `EXPOSE` directive in their `Dockerfile` or by using the `--expose` flag to `docker run` or `docker create`.
 
-Provided your DNS is setup to forward foo.bar.com to the host running nginx-proxy, the request will be routed to a container with the VIRTUAL_HOST env var set.
+Provided your DNS is setup to forward foo.bar.com to the host running HA-proxy, the request will be routed to a container with the VIRTUAL_HOST env var set.
 
 ### Image variants
 
-The nginx-proxy images are available in two flavors.
+The HA-proxy images are available in only one flavors. Debian version is not succeeded in this flavor.
 
-#### jwilder/nginx-proxy:latest
+#### max-sum/ha-proxy:latest
 
-This image uses the debian:jessie based nginx image.
+This image is based on the HAProxy:alpine image. 
 
-    $ docker pull jwilder/nginx-proxy:latest
-
-#### jwilder/nginx-proxy:alpine
-
-This image is based on the nginx:alpine image. Use this image to fully support HTTP/2 (including ALPN required by recent Chrome versions). A valid certificate is required as well (see eg. below "SSL Support using letsencrypt" for more info).
-
-    $ docker pull jwilder/nginx-proxy:alpine
+    $ docker pull max-sum/ha-proxy
 
 ### Docker Compose
 
 ```yaml
 version: '2'
-
 services:
-  nginx-proxy:
-    image: jwilder/nginx-proxy
+  HA-proxy:
+    image: max-sum/ha-proxy
+    container_name: HA-proxy
     ports:
       - "80:80"
     volumes:
@@ -52,6 +47,7 @@ services:
     image: jwilder/whoami
     environment:
       - VIRTUAL_HOST=whoami.local
+
 ```
 
 ```shell
@@ -62,57 +58,68 @@ I'm 5b129ab83266
 
 ### IPv6 support
 
-You can activate the IPv6 support for the nginx-proxy container by passing the value `true` to the `ENABLE_IPV6` environment variable:
+You can activate the IPv6 support for the HA-proxy container by passing the value `true` to the `ENABLE_IPV6` environment variable:
 
-    $ docker run -d -p 80:80 -e ENABLE_IPV6=true -v /var/run/docker.sock:/tmp/docker.sock:ro jwilder/nginx-proxy
+    $ docker run -d -p 80:80 -e ENABLE_IPV6=true -v /var/run/docker.sock:/tmp/docker.sock:ro max-sum/ha-proxy
 
 ### Multiple Ports
 
-If your container exposes multiple ports, nginx-proxy will default to the service running on port 80.  If you need to specify a different port, you can set a VIRTUAL_PORT env var to select a different one.  If your container only exposes one port and it has a VIRTUAL_HOST env var set, that port will be selected.
+If your container exposes multiple ports, HA-proxy will default to the service running on port 80.  If you need to specify a different port, you can set a VIRTUAL_PORT env var to select a different one.  If your container only exposes one port and it has a VIRTUAL_HOST env var set, that port will be selected.
 
-  [1]: https://github.com/jwilder/docker-gen
-  [2]: http://jasonwilder.com/blog/2014/03/25/automated-nginx-reverse-proxy-for-docker/
+  [1]: https://github.com/jwilder/nginx-proxy
+  [2]: https://github.com/jwilder/docker-gen
+  [3]: http://jasonwilder.com/blog/2014/03/25/automated-nginx-reverse-proxy-for-docker/
 
 ### Multiple Hosts
 
 If you need to support multiple virtual hosts for a container, you can separate each entry with commas.  For example, `foo.bar.com,baz.bar.com,bar.com` and each host will be setup the same.
 
-### Wildcard Hosts
+### Wildcard Hosts (different from nginx-proxy)
 
-You can also use wildcards at the beginning and the end of host name, like `*.bar.com` or `foo.bar.*`. Or even a regular expression, which can be very useful in conjunction with a wildcard DNS service like [xip.io](http://xip.io), using `~^foo\.bar\..*\.xip\.io` will match `foo.bar.127.0.0.1.xip.io`, `foo.bar.10.0.2.2.xip.io` and all other given IPs. More information about this topic can be found in the nginx documentation about [`server_names`](http://nginx.org/en/docs/http/server_names.html).
+You can also use wildcards **at the beginning**, like `*.bar.com` or `*www.foo.com`. Or even a regular expression, which can be very useful in conjunction with a wildcard DNS service like [xip.io](http://xip.io), using `~^foo\.bar\..*\.xip\.io` will match `foo.bar.127.0.0.1.xip.io`, `foo.bar.10.0.2.2.xip.io` and all other given IPs.
 
 ### Multiple Networks
 
-With the addition of [overlay networking](https://docs.docker.com/engine/userguide/networking/get-started-overlay/) in Docker 1.9, your `nginx-proxy` container may need to connect to backend containers on multiple networks. By default, if you don't pass the `--net` flag when your `nginx-proxy` container is created, it will only be attached to the default `bridge` network. This means that it will not be able to connect to containers on networks other than `bridge`.
+With the addition of [overlay networking](https://docs.docker.com/engine/userguide/networking/get-started-overlay/) in Docker 1.9, your `HA-proxy` container may need to connect to backend containers on multiple networks. By default, if you don't pass the `--net` flag when your `HA-proxy` container is created, it will only be attached to the default `bridge` network. This means that it will not be able to connect to containers on networks other than `bridge`.
 
-If you want your `nginx-proxy` container to be attached to a different network, you must pass the `--net=my-network` option in your `docker create` or `docker run` command. At the time of this writing, only a single network can be specified at container creation time. To attach to other networks, you can use the `docker network connect` command after your container is created:
+If you want your `HA-proxy` container to be attached to a different network, you must pass the `--net=my-network` option in your `docker create` or `docker run` command. At the time of this writing, only a single network can be specified at container creation time. To attach to other networks, you can use the `docker network connect` command after your container is created:
 
 ```console
 $ docker run -d -p 80:80 -v /var/run/docker.sock:/tmp/docker.sock:ro \
-    --name my-nginx-proxy --net my-network jwilder/nginx-proxy
-$ docker network connect my-other-network my-nginx-proxy
+    --name my-HA-proxy --net my-network max-sum/ha-proxy
+$ docker network connect my-other-network my-HA-proxy
 ```
 
-In this example, the `my-nginx-proxy` container will be connected to `my-network` and `my-other-network` and will be able to proxy to other containers attached to those networks.
+In this example, the `my-HA-proxy` container will be connected to `my-network` and `my-other-network` and will be able to proxy to other containers attached to those networks.
 
-### Internet vs. Local Network Access
+### Internet vs. Local Network Access (different from nginx-proxy)
 
-If you allow traffic from the public internet to access your `nginx-proxy` container, you may want to restrict some containers to the internal network only, so they cannot be accessed from the public internet.  On containers that should be restricted to the internal network, you should set the environment variable `NETWORK_ACCESS=internal`.  By default, the *internal* network is defined as `127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16`.  To change the list of networks considered internal, mount a file on the `nginx-proxy` at `/etc/nginx/network_internal.conf` with these contents, edited to suit your needs:
-
-```
-# These networks are considered "internal"
-allow 127.0.0.0/8;
-allow 10.0.0.0/8;
-allow 192.168.0.0/16;
-allow 172.16.0.0/12;
-
-# Traffic from all other networks will be rejected
-deny all;
-```
+If you allow traffic from the public internet to access your `HA-proxy` container, you may want to restrict some containers to the internal network only, so they cannot be accessed from the public internet.  On containers that should be restricted to the internal network, you should set the environment variable `NETWORK_ACCESS=internal`.  By default, the *internal* network is defined as `127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16`. **Currently, no custom settings for internal network is available.**
 
 When internal-only access is enabled, external clients with be denied with an `HTTP 403 Forbidden`
 
-> If there is a load-balancer / reverse proxy in front of `nginx-proxy` that hides the client IP (example: AWS Application/Elastic Load Balancer), you will need to use the nginx `realip` module (already installed) to extract the client's IP from the HTTP request headers.  Please see the [nginx realip module configuration](http://nginx.org/en/docs/http/ngx_http_realip_module.html) for more details.  This configuration can be added to a new config file and mounted in `/etc/nginx/conf.d/`.
+### Connection Control (Additional feature)
+
+**This is an additional feature that does not exist in nginx-proxy.**
+
+You can control the connection behavior in different virtual hosts.
+
+There are 4 modes of connection:
+
+1. Tunnel
+This mode disables any HTTP processing past the first request and the first response. Therefor, the connection would not be actively closed by HAProxy and will maintained forever unless closed by any terminal. If the client request to upgrade to WebSocket, HAProxy will switch to this mode.
+To use this mode explicitly, set the environment variable `CONNECTION=tunnel`.
+2. Keep-Alive
+In this mode, HAProxy will try to persist connection. For each connection it processes each request and response, and leaves the connection idle on both sides between the end of a response and the start of a new request. However, there is a timeout to disconnect if the connection is idle for a set period of time.
+To use this mode explicitly, set the environment variable `CONNECTION=keep-alive`.
+3. Server-Close (Default)
+This mode close connections on the server side immediately while keeping the ability to support HTTP keep-alive and pipelining on the client side. This provides the lowest latency on the client side (slow network) and the fastest session reuse on the server side to save server resources. This is the default mode in HA-proxy.
+To use this mode explicitly, set the environment variable `CONNECTION=server-close`.
+4. Close
+In this mode, HAProxy would check if a "Connection: close" header is already set in each direction, and will add one if missing. Each end should react to this by actively closing the TCP connection after each transfer, thus resulting in a switch to the HTTP close mode.
+To use this mode explicitly, set the environment variable `CONNECTION=close`.
+
+These modes are an extension of `option http-tunnel`, `option http-keep-alive`, `option http-server-close` and `option httpclose` in HAProxy configuration. Check [HAProxy](https://cbonte.github.io/HAProxy-dconv/1.8/configuration.html#option%20http-server-close) document to have further understanding on different modes.
 
 ### SSL Backends
 
@@ -123,15 +130,16 @@ If you would like the reverse proxy to connect to your backend using HTTPS inste
 
 ### Default Host
 
+This feature is coming soon.
+
 To set the default host for nginx use the env var `DEFAULT_HOST=foo.bar.com` for example
 
     $ docker run -d -p 80:80 -e DEFAULT_HOST=foo.bar.com -v /var/run/docker.sock:/tmp/docker.sock:ro jwilder/nginx-proxy
 
+### Separate Containers (different from nginx-proxy)
 
-### Separate Containers
-
-nginx-proxy can also be run as two separate containers using the [jwilder/docker-gen](https://index.docker.io/u/jwilder/docker-gen/)
-image and the official [nginx](https://registry.hub.docker.com/_/nginx/) image.
+HA-proxy can also be run as two separate containers using the [jwilder/docker-gen](https://index.docker.io/u/jwilder/docker-gen/)
+image and the official [HAProxy](https://registry.hub.docker.com/_/HAProxy/) image.
 
 You may want to do this to prevent having the docker socket bound to a publicly exposed container service.
 
@@ -143,82 +151,107 @@ $ curl -H "Host: whoami.local" localhost
 I'm 5b129ab83266
 ```
 
-To run nginx proxy as a separate container you'll need to have [nginx.tmpl](https://github.com/jwilder/nginx-proxy/blob/master/nginx.tmpl) on your host system.
+To run nginx proxy as a separate container you'll need to have [HAProxy.tmpl](https://github.com/max-sum/ha-proxy/blob/master/templates/HAProxy.tmpl), [certs.tmpl](https://github.com/max-sum/ha-proxy/blob/master/templates/certs.tmpl) and [docker-gen-separate.conf](https://github.com/max-sum/ha-proxy/blob/master/docker-gen-separate.conf) on your host system.
 
-First start nginx with a volume:
-
-
-    $ docker run -d -p 80:80 --name nginx -v /tmp/nginx:/etc/nginx/conf.d -t nginx
-
-Then start the docker-gen container with the shared volume and template:
-
+**Note: starting order is different from nginx-proxy**
+First start the docker-gen container with a volume, templates (stored in ./templates/) and the config file:
 ```
-$ docker run --volumes-from nginx \
+$ docker run \
+    -v /tmp/HAProxy:/etc/HAProxy \
     -v /var/run/docker.sock:/tmp/docker.sock:ro \
-    -v $(pwd):/etc/docker-gen/templates \
-    -t jwilder/docker-gen -notify-sighup nginx -watch /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf
+    -v $(pwd)/docker-gen-separate.conf:/etc/docker-gen/docker-gen.conf:ro \
+    -v $(pwd)/templates:/etc/docker-gen/templates:ro \
+    -t jwilder/docker-gen -config /etc/docker-gen/docker-gen.conf
 ```
+
+Then start HAProxy with the shared volume:
+
+    $ docker run -d -p 80:80 --name HAProxy -v /tmp/HAProxy:/etc/HAProxy -t HAProxy
+
 
 Finally, start your containers with `VIRTUAL_HOST` environment variables.
 
     $ docker run -e VIRTUAL_HOST=foo.bar.com  ...
-### SSL Support using letsencrypt
+
+
+### SSL Support using letsencrypt (different from nginx-proxy)
+
+**This module is under development**
 
 [letsencrypt-nginx-proxy-companion](https://github.com/JrCs/docker-letsencrypt-nginx-proxy-companion) is a lightweight companion container for the nginx-proxy. It allow the creation/renewal of Let's Encrypt certificates automatically. 
 
-### SSL Support
+### SSL Support (different from nginx-proxy)
 
-SSL is supported using single host, wildcard and SNI certificates using naming conventions for
-certificates or optionally specifying a cert name (for SNI) as an environment variable.
+SSL is supported using single host, wildcard and SNI certificates using naming conventions forcertificates or optionally specifying a cert name (for SNI) as an environment variable.
 
 To enable SSL:
 
-    $ docker run -d -p 80:80 -p 443:443 -v /path/to/certs:/etc/nginx/certs -v /var/run/docker.sock:/tmp/docker.sock:ro jwilder/nginx-proxy
+    $ docker run -d -p 80:80 -p 443:443 -v /path/to/certs:/etc/HAProxy/certs -v /var/run/docker.sock:/tmp/docker.sock:ro max-sum/ha-proxy
 
-The contents of `/path/to/certs` should contain the certificates and private keys for any virtual
-hosts in use.  The certificate and keys should be named after the virtual host with a `.crt` and
-`.key` extension.  For example, a container with `VIRTUAL_HOST=foo.bar.com` should have a
-`foo.bar.com.crt` and `foo.bar.com.key` file in the certs directory.
+The contents of `/path/to/certs` should contain the certificates and private keys **concatenated in one file** for any virtual hosts in use. See [HAProxy](https://cbonte.github.io/HAProxy-dconv/1.8/configuration.html#5.1-crt) document to get more informantion.
+The certificate and keys should be named after the virtual host with **a `.pem` extension**.
+For example, a container with `VIRTUAL_HOST=foo.bar.com` should have a `foo.bar.com.pem` file in the certs directory.
 
-If you are running the container in a virtualized environment (Hyper-V, VirtualBox, etc...),
-/path/to/certs must exist in that environment or be made accessible to that environment.
+**If you have muliple certificates for different cipher suites (RSA, DSA, ECDSA) used by one virtual host, you should name them with `.pem.rsa`, `.pem.dsa` or `.pem.ecdsa` accordingly. Noted that the suffix after `.pem` is not recognized as a part of `CERT_NAME`. See the SNI part below.**
+
+If you are running the container in a virtualized environment (Hyper-V, VirtualBox, etc...), /path/to/certs must exist in that environment or be made accessible to that environment.
 By default, Docker is not able to mount directories on the host machine to containers running in a virtual machine.
 
-#### Diffie-Hellman Groups
+#### Diffie-Hellman Groups (different from nginx-proxy)
 
-Diffie-Hellman groups are enabled by default, with a pregenerated key in `/etc/nginx/dhparam/dhparam.pem`.
-You can mount a different `dhparam.pem` file at that location to override the default cert.
-To use custom `dhparam.pem` files per-virtual-host, the files should be named after the virtual host with a
-`dhparam` suffix and `.pem` extension. For example, a container with `VIRTUAL_HOST=foo.bar.com`
-should have a `foo.bar.com.dhparam.pem` file in the `/etc/nginx/certs` directory.
+Diffie-Hellman groups are enabled by default.
+You can place a different `dhparam.pem` file at `/etc/HAProxy/certs/dhparam.pem` to override the default cert.
+To use custom `dhparam.pem` files per-virtual-host, **you should concatenate it together with the certificate and key**.
+For example, a container with `VIRTUAL_HOST=foo.bar.com` should have a **`foo.bar.com.pem`** file in the `/etc/HAProxy/certs`  directory, **containing certificate, key and dhparam in the file**. **If you have RSA and ECDSA version of certificate, both should add `dhparam.pem` in the file.**
 
-> NOTE: If you don't mount a `dhparam.pem` file at `/etc/nginx/dhparam/dhparam.pem`, one will be generated
-at startup.  Since it can take minutes to generate a new `dhparam.pem`, it is done at low priority in the
-background.  Once generation is complete, the `dhparam.pem` is saved on a persistent volume and nginx
-is reloaded.  This generation process only occurs the first time you start `nginx-proxy`.
+The file format would be (ECDSA version shown):
+```
+-----BEGIN CERTIFICATE-----
+MIIGjTCCBXWgAwIBAgIMIwQ2xOJA3Mcu8FfLMA0GCSqGSIb3DQEBCwUAMEwxCzAJ
+...
+aYLwHBknM7WNqKmiFYbM2Chjd5tZDu9I/2h+HgHZjmwBmYR2HrHw==
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIIETTCCAzWgAwIBAgILBAAAAAABRE7wNjEwDQYJKoZIhvcNAQELBQAwVzELMAkG
+...
+Uw==
+-----END CERTIFICATE-----
+-----BEGIN EC PARAMETERS-----
+...
+-----END EC PARAMETERS-----
+-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEIB7/vJT61Rj...2yolCapg2j0BE9YNuDKZW++3GgBEojkOhA==
+-----END EC PRIVATE KEY-----
+-----BEGIN DH PARAMETERS-----
+MIIBCAKCAQEAgpepBiSgggPt0sxN2swUq3Zj4nepuHIBDFJFR+FH7f1yh+rXoKHI
+...
+Qh/Dqggb+cpucC5S4yAmz2f4+FKxPhoa4wIBAg==
+-----END DH PARAMETERS-----
+```
+
+> NOTE: If you don't have a `dhparam.pem` file at `/etc/HAProxy/dhparam/dhparam.pem`, **HAProxy would generate one automantically**.
 
 > COMPATIBILITY WARNING: The default generated `dhparam.pem` key is 2048 bits for A+ security.  Some 
 > older clients (like Java 6 and 7) do not support DH keys with over 1024 bits.  In order to support these
-> clients, you must either provide your own `dhparam.pem`, or tell `nginx-proxy` to generate a 1024-bit
+> clients, you must either provide your own `dhparam.pem`, or tell `HA-proxy` to generate a 1024-bit
 > key on startup by passing `-e DHPARAM_BITS=1024`.
 
-In the separate container setup, no pregenerated key will be available and neither the
-[jwilder/docker-gen](https://index.docker.io/u/jwilder/docker-gen/) image nor the offical
-[nginx](https://registry.hub.docker.com/_/nginx/) image will generate one. If you still want A+ security
-in a separate container setup, you'll have to generate a 2048 bits DH key file manually and mount it on the
-nginx container, at `/etc/nginx/dhparam/dhparam.pem`.
+In the separate container setup, **the offical [HAProxy](https://registry.hub.docker.com/_/HAProxy/) image will generate a
+`dhparam` by its own. And you can also pass `DHPARAM_BITS` to the coresponding `docker-gen` container.**
 
 #### Wildcard Certificates
 
 Wildcard certificates and keys should be named after the domain name with a `.crt` and `.key` extension.
 For example `VIRTUAL_HOST=foo.bar.com` would use cert name `bar.com.crt` and `bar.com.key`.
 
-#### SNI
+#### SNI (different from nginx-proxy)
 
-If your certificate(s) supports multiple domain names, you can start a container with `CERT_NAME=<name>`
-to identify the certificate to be used.  For example, a certificate for `*.foo.com` and `*.bar.com`
-could be named `shared.crt` and `shared.key`.  A container running with `VIRTUAL_HOST=foo.bar.com`
-and `CERT_NAME=shared` will then use this shared cert.
+If your certificate(s) supports multiple domain names, you can start a container with `CERT_NAME=<name>` to identify the certificate to be used.  For example, a certificate for `*.foo.com` and `*.bar.com` could be named **`shared.pem`**.  A container running with `VIRTUAL_HOST=foo.bar.com` and **`CERT_NAME=shared.pem`** will then use this shared cert.
+
+**Difference from nginx-proxy**
+
+If you have multiple version of shared certificated for RSA, DSA or/and ECDSA, you only need to care about the common name. For example, if you have certificates named `shared.pem.rsa` and `shared.pem.ecdsa`, you only need to set `CERT_NAME=shared.pem` to use both.
+You can see the [HAProxy](https://cbonte.github.io/HAProxy-dconv/1.8/configuration.html#5.1-crt) document for bundled certificate settings.
 
 #### How SSL Support Works
 
@@ -271,109 +304,14 @@ is enabled with `max-age=31536000` for HTTPS sites.  You can disable HSTS with t
 even if they type in `http://` manually.  The only way to get to an HTTP site after receiving an HSTS 
 response is to clear your browser's HSTS cache.
 
-### Basic Authentication Support
+### Basic Authentication Support (different from nginx-proxy)
 
-In order to be able to secure your virtual host, you have to create a file named as its equivalent VIRTUAL_HOST variable on directory
-/etc/nginx/htpasswd/$VIRTUAL_HOST
+**There is no basic authentication support in HA-proxy now.**
 
-```
-$ docker run -d -p 80:80 -p 443:443 \
-    -v /path/to/htpasswd:/etc/nginx/htpasswd \
-    -v /path/to/certs:/etc/nginx/certs \
-    -v /var/run/docker.sock:/tmp/docker.sock:ro \
-    jwilder/nginx-proxy
-```
+### Custom HAProxy Configuration (different from nginx-proxy)
 
-You'll need apache2-utils on the machine where you plan to create the htpasswd file. Follow these [instructions](http://httpd.apache.org/docs/2.2/programs/htpasswd.html)
-
-### Custom Nginx Configuration
-
-If you need to configure Nginx beyond what is possible using environment variables, you can provide custom configuration files on either a proxy-wide or per-`VIRTUAL_HOST` basis.
-
-#### Replacing default proxy settings
-
-If you want to replace the default proxy settings for the nginx container, add a configuration file at `/etc/nginx/proxy.conf`. A file with the default settings would
-look like this:
-
-```Nginx
-# HTTP 1.1 support
-proxy_http_version 1.1;
-proxy_buffering off;
-proxy_set_header Host $http_host;
-proxy_set_header Upgrade $http_upgrade;
-proxy_set_header Connection $proxy_connection;
-proxy_set_header X-Real-IP $remote_addr;
-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-proxy_set_header X-Forwarded-Proto $proxy_x_forwarded_proto;
-proxy_set_header X-Forwarded-Ssl $proxy_x_forwarded_ssl;
-proxy_set_header X-Forwarded-Port $proxy_x_forwarded_port;
-
-# Mitigate httpoxy attack (see README for details)
-proxy_set_header Proxy "";
-```
-
-***NOTE***: If you provide this file it will replace the defaults; you may want to check the .tmpl file to make sure you have all of the needed options.
-
-***NOTE***: The default configuration blocks the `Proxy` HTTP request header from being sent to downstream servers.  This prevents attackers from using the so-called [httpoxy attack](http://httpoxy.org).  There is no legitimate reason for a client to send this header, and there are many vulnerable languages / platforms (`CVE-2016-5385`, `CVE-2016-5386`, `CVE-2016-5387`, `CVE-2016-5388`, `CVE-2016-1000109`, `CVE-2016-1000110`, `CERT-VU#797896`).
-
-#### Proxy-wide
-
-To add settings on a proxy-wide basis, add your configuration file under `/etc/nginx/conf.d` using a name ending in `.conf`.
-
-This can be done in a derived image by creating the file in a `RUN` command or by `COPY`ing the file into `conf.d`:
-
-```Dockerfile
-FROM jwilder/nginx-proxy
-RUN { \
-      echo 'server_tokens off;'; \
-      echo 'client_max_body_size 100m;'; \
-    } > /etc/nginx/conf.d/my_proxy.conf
-```
-
-Or it can be done by mounting in your custom configuration in your `docker run` command:
-
-    $ docker run -d -p 80:80 -p 443:443 -v /path/to/my_proxy.conf:/etc/nginx/conf.d/my_proxy.conf:ro -v /var/run/docker.sock:/tmp/docker.sock:ro jwilder/nginx-proxy
-
-#### Per-VIRTUAL_HOST
-
-To add settings on a per-`VIRTUAL_HOST` basis, add your configuration file under `/etc/nginx/vhost.d`. Unlike in the proxy-wide case, which allows multiple config files with any name ending in `.conf`, the per-`VIRTUAL_HOST` file must be named exactly after the `VIRTUAL_HOST`.
-
-In order to allow virtual hosts to be dynamically configured as backends are added and removed, it makes the most sense to mount an external directory as `/etc/nginx/vhost.d` as opposed to using derived images or mounting individual configuration files.
-
-For example, if you have a virtual host named `app.example.com`, you could provide a custom configuration for that host as follows:
-
-    $ docker run -d -p 80:80 -p 443:443 -v /path/to/vhost.d:/etc/nginx/vhost.d:ro -v /var/run/docker.sock:/tmp/docker.sock:ro jwilder/nginx-proxy
-    $ { echo 'server_tokens off;'; echo 'client_max_body_size 100m;'; } > /path/to/vhost.d/app.example.com
-
-If you are using multiple hostnames for a single container (e.g. `VIRTUAL_HOST=example.com,www.example.com`), the virtual host configuration file must exist for each hostname. If you would like to use the same configuration for multiple virtual host names, you can use a symlink:
-
-    $ { echo 'server_tokens off;'; echo 'client_max_body_size 100m;'; } > /path/to/vhost.d/www.example.com
-    $ ln -s /path/to/vhost.d/www.example.com /path/to/vhost.d/example.com
-
-#### Per-VIRTUAL_HOST default configuration
-
-If you want most of your virtual hosts to use a default single configuration and then override on a few specific ones, add those settings to the `/etc/nginx/vhost.d/default` file. This file
-will be used on any virtual host which does not have a `/etc/nginx/vhost.d/{VIRTUAL_HOST}` file associated with it.
-
-#### Per-VIRTUAL_HOST location configuration
-
-To add settings to the "location" block on a per-`VIRTUAL_HOST` basis, add your configuration file under `/etc/nginx/vhost.d`
-just like the previous section except with the suffix `_location`.
-
-For example, if you have a virtual host named `app.example.com` and you have configured a proxy_cache `my-cache` in another custom file, you could tell it to use a proxy cache as follows:
-
-    $ docker run -d -p 80:80 -p 443:443 -v /path/to/vhost.d:/etc/nginx/vhost.d:ro -v /var/run/docker.sock:/tmp/docker.sock:ro jwilder/nginx-proxy
-    $ { echo 'proxy_cache my-cache;'; echo 'proxy_cache_valid  200 302  60m;'; echo 'proxy_cache_valid  404 1m;' } > /path/to/vhost.d/app.example.com_location
-
-If you are using multiple hostnames for a single container (e.g. `VIRTUAL_HOST=example.com,www.example.com`), the virtual host configuration file must exist for each hostname. If you would like to use the same configuration for multiple virtual host names, you can use a symlink:
-
-    $ { echo 'proxy_cache my-cache;'; echo 'proxy_cache_valid  200 302  60m;'; echo 'proxy_cache_valid  404 1m;' } > /path/to/vhost.d/app.example.com_location
-    $ ln -s /path/to/vhost.d/www.example.com /path/to/vhost.d/example.com
-
-#### Per-VIRTUAL_HOST location default configuration
-
-If you want most of your virtual hosts to use a default single `location` block configuration and then override on a few specific ones, add those settings to the `/etc/nginx/vhost.d/default_location` file. This file
-will be used on any virtual host which does not have a `/etc/nginx/vhost.d/{VIRTUAL_HOST}_location` file associated with it.
+**Currently, you cannot add custom HAProxy configurations.**
+However, you can manually moddify the templates `HAProxy.tmpl` and `certs.tmpl` to change the default bahaviors.
 
 ### Contributing
 
@@ -381,15 +319,9 @@ Before submitting pull requests or issues, please check github to make sure an e
 
 #### Running Tests Locally
 
-To run tests, you need to prepare the docker image to test which must be tagged `jwilder/nginx-proxy:test`:
+To run tests, you need to prepare the docker image to test which must be tagged `max-sum/ha-proxy:test`:
 
-    docker build -t jwilder/nginx-proxy:test .  # build the Debian variant image
-    
-and call the [test/pytest.sh](test/pytest.sh) script.
-
-Then build the Alpine variant of the image:
-
-    docker build -f Dockerfile.alpine -t jwilder/nginx-proxy:test .  # build the Alpline variant image
+    docker build -f Dockerfile -t max-sum/ha-proxy:test .  # build the Alpline variant image
 
 and call the [test/pytest.sh](test/pytest.sh) script again.
 

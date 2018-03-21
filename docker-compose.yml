@@ -1,8 +1,8 @@
 version: '2'
 services:
-  haproxy-proxy:
-    image: Max-Sum/haproxy-proxy
-    container_name: haproxy-proxy
+  ha-proxy:
+    image: Max-Sum/ha-proxy
+    container_name: ha-proxy
     ports:
       - "80:80"
     volumes:
