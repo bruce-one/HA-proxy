@@ -1,4 +1,4 @@
-![HAProxy 1.8](https://img.shields.io/badge/HAProxy-1.8-brightgreen.svg) ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg) [![](https://img.shields.io/docker/stars/max-sum/ha-proxy.svg)](https://hub.docker.com/r/max-sum/ha-proxy 'DockerHub') [![](https://img.shields.io/docker/pulls/max-sum/ha-proxy.svg)](https://hub.docker.com/r/max-sum/ha-proxy 'DockerHub')
+![HAProxy 1.8](https://img.shields.io/badge/HAProxy-1.8-brightgreen.svg) ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg) [![](https://img.shields.io/docker/stars/gzmaxsum/ha-proxy.svg)](https://hub.docker.com/r/gzmaxsum/ha-proxy 'DockerHub') [![](https://img.shields.io/docker/pulls/gzmaxsum/ha-proxy.svg)](https://hub.docker.com/r/gzmaxsum/ha-proxy 'DockerHub')
 
 This is HAProxy flavor of [nginx-proxy][1]. Please look through the readme before you use, there is some difference in configuration from nginx-proxy, which will be shown in bold font.
 
@@ -10,7 +10,7 @@ See [Automated Nginx Reverse Proxy for Docker][3] for why you might want to use 
 
 To run it:
 
-    $ docker run -d -p 80:80 -v /var/run/docker.sock:/tmp/docker.sock:ro max-sum/ha-proxy
+    $ docker run -d -p 80:80 -v /var/run/docker.sock:/tmp/docker.sock:ro gzmaxsum/ha-proxy
 
 Then start any containers you want proxied with an env var `VIRTUAL_HOST=subdomain.youdomain.com`
 
@@ -24,20 +24,20 @@ Provided your DNS is setup to forward foo.bar.com to the host running HA-proxy, 
 
 The HA-proxy images are available in only one flavors. Debian version is not succeeded in this flavor.
 
-#### max-sum/ha-proxy:latest
+#### gzmaxsum/ha-proxy:latest
 
 This image is based on the HAProxy:alpine image. 
 
-    $ docker pull max-sum/ha-proxy
+    $ docker pull gzmaxsum/ha-proxy
 
 ### Docker Compose
 
 ```yaml
 version: '2'
 services:
-  HA-proxy:
-    image: max-sum/ha-proxy
-    container_name: HA-proxy
+  ha-proxy:
+    image: gzmaxsum/ha-proxy
+    container_name: ha-proxy
     ports:
       - "80:80"
     volumes:
@@ -60,7 +60,7 @@ I'm 5b129ab83266
 
 You can activate the IPv6 support for the HA-proxy container by passing the value `true` to the `ENABLE_IPV6` environment variable:
 
-    $ docker run -d -p 80:80 -e ENABLE_IPV6=true -v /var/run/docker.sock:/tmp/docker.sock:ro max-sum/ha-proxy
+    $ docker run -d -p 80:80 -e ENABLE_IPV6=true -v /var/run/docker.sock:/tmp/docker.sock:ro gzmaxsum/ha-proxy
 
 ### Multiple Ports
 
@@ -80,21 +80,21 @@ You can also use wildcards **at the beginning**, like `*.bar.com` or `*www.foo.c
 
 ### Multiple Networks
 
-With the addition of [overlay networking](https://docs.docker.com/engine/userguide/networking/get-started-overlay/) in Docker 1.9, your `HA-proxy` container may need to connect to backend containers on multiple networks. By default, if you don't pass the `--net` flag when your `HA-proxy` container is created, it will only be attached to the default `bridge` network. This means that it will not be able to connect to containers on networks other than `bridge`.
+With the addition of [overlay networking](https://docs.docker.com/engine/userguide/networking/get-started-overlay/) in Docker 1.9, your `ha-proxy` container may need to connect to backend containers on multiple networks. By default, if you don't pass the `--net` flag when your `ha-proxy` container is created, it will only be attached to the default `bridge` network. This means that it will not be able to connect to containers on networks other than `bridge`.
 
-If you want your `HA-proxy` container to be attached to a different network, you must pass the `--net=my-network` option in your `docker create` or `docker run` command. At the time of this writing, only a single network can be specified at container creation time. To attach to other networks, you can use the `docker network connect` command after your container is created:
+If you want your `ha-proxy` container to be attached to a different network, you must pass the `--net=my-network` option in your `docker create` or `docker run` command. At the time of this writing, only a single network can be specified at container creation time. To attach to other networks, you can use the `docker network connect` command after your container is created:
 
 ```console
 $ docker run -d -p 80:80 -v /var/run/docker.sock:/tmp/docker.sock:ro \
-    --name my-HA-proxy --net my-network max-sum/ha-proxy
-$ docker network connect my-other-network my-HA-proxy
+    --name my-ha-proxy --net my-network gzmaxsum/ha-proxy
+$ docker network connect my-other-network my-ha-proxy
 ```
 
-In this example, the `my-HA-proxy` container will be connected to `my-network` and `my-other-network` and will be able to proxy to other containers attached to those networks.
+In this example, the `my-ha-proxy` container will be connected to `my-network` and `my-other-network` and will be able to proxy to other containers attached to those networks.
 
 ### Internet vs. Local Network Access (different from nginx-proxy)
 
-If you allow traffic from the public internet to access your `HA-proxy` container, you may want to restrict some containers to the internal network only, so they cannot be accessed from the public internet.  On containers that should be restricted to the internal network, you should set the environment variable `NETWORK_ACCESS=internal`.  By default, the *internal* network is defined as `127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16`. **Currently, no custom settings for internal network is available.**
+If you allow traffic from the public internet to access your `ha-proxy` container, you may want to restrict some containers to the internal network only, so they cannot be accessed from the public internet.  On containers that should be restricted to the internal network, you should set the environment variable `NETWORK_ACCESS=internal`.  By default, the *internal* network is defined as `127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16`. **Currently, no custom settings for internal network is available.**
 
 When internal-only access is enabled, external clients with be denied with an `HTTP 403 Forbidden`
 
@@ -119,7 +119,7 @@ To use this mode explicitly, set the environment variable `CONNECTION=server-clo
 In this mode, HAProxy would check if a "Connection: close" header is already set in each direction, and will add one if missing. Each end should react to this by actively closing the TCP connection after each transfer, thus resulting in a switch to the HTTP close mode.
 To use this mode explicitly, set the environment variable `CONNECTION=close`.
 
-These modes are an extension of `option http-tunnel`, `option http-keep-alive`, `option http-server-close` and `option httpclose` in HAProxy configuration. Check [HAProxy](https://cbonte.github.io/HAProxy-dconv/1.8/configuration.html#option%20http-server-close) document to have further understanding on different modes.
+These modes are an extension of `option http-tunnel`, `option http-keep-alive`, `option http-server-close` and `option httpclose` in HAProxy configuration. Check [HAProxy](https://cbonte.github.io/haproxy-dconv/1.8/configuration.html#option%20http-server-close) document to have further understanding on different modes.
 
 ### SSL Backends
 
@@ -139,7 +139,7 @@ To set the default host for nginx use the env var `DEFAULT_HOST=foo.bar.com` for
 ### Separate Containers (different from nginx-proxy)
 
 HA-proxy can also be run as two separate containers using the [jwilder/docker-gen](https://index.docker.io/u/jwilder/docker-gen/)
-image and the official [HAProxy](https://registry.hub.docker.com/_/HAProxy/) image.
+image and the official [HAProxy](https://registry.hub.docker.com/_/haproxy/) image.
 
 You may want to do this to prevent having the docker socket bound to a publicly exposed container service.
 
@@ -151,22 +151,22 @@ $ curl -H "Host: whoami.local" localhost
 I'm 5b129ab83266
 ```
 
-To run nginx proxy as a separate container you'll need to have [HAProxy.tmpl](https://github.com/max-sum/ha-proxy/blob/master/templates/HAProxy.tmpl), [certs.tmpl](https://github.com/max-sum/ha-proxy/blob/master/templates/certs.tmpl) and [docker-gen-separate.conf](https://github.com/max-sum/ha-proxy/blob/master/docker-gen-separate.conf) on your host system.
+To run nginx proxy as a separate container you'll need to have [haproxy.tmpl](https://github.com/max-sum/ha-proxy/blob/master/templates/haproxy.tmpl), [certs.tmpl](https://github.com/max-sum/ha-proxy/blob/master/templates/certs.tmpl) and [docker-gen-separate.conf](https://github.com/max-sum/ha-proxy/blob/master/docker-gen-separate.conf) on your host system.
 
 **Note: starting order is different from nginx-proxy**
 First start the docker-gen container with a volume, templates (stored in ./templates/) and the config file:
 ```
 $ docker run \
-    -v /tmp/HAProxy:/etc/HAProxy \
+    -v /tmp/HAProxy:/etc/haproxy \
     -v /var/run/docker.sock:/tmp/docker.sock:ro \
     -v $(pwd)/docker-gen-separate.conf:/etc/docker-gen/docker-gen.conf:ro \
     -v $(pwd)/templates:/etc/docker-gen/templates:ro \
     -t jwilder/docker-gen -config /etc/docker-gen/docker-gen.conf
 ```
 
-Then start HAProxy with the shared volume:
+Then start haproxy with the shared volume:
 
-    $ docker run -d -p 80:80 --name HAProxy -v /tmp/HAProxy:/etc/HAProxy -t HAProxy
+    $ docker run -d -p 80:80 --name haproxy -v /tmp/haproxy:/etc/haproxy -t haproxy:alpine
 
 
 Finally, start your containers with `VIRTUAL_HOST` environment variables.
@@ -186,9 +186,9 @@ SSL is supported using single host, wildcard and SNI certificates using naming c
 
 To enable SSL:
 
-    $ docker run -d -p 80:80 -p 443:443 -v /path/to/certs:/etc/HAProxy/certs -v /var/run/docker.sock:/tmp/docker.sock:ro max-sum/ha-proxy
+    $ docker run -d -p 80:80 -p 443:443 -v /path/to/certs:/etc/haproxy/certs -v /var/run/docker.sock:/tmp/docker.sock:ro gzmaxsum/ha-proxy
 
-The contents of `/path/to/certs` should contain the certificates and private keys **concatenated in one file** for any virtual hosts in use. See [HAProxy](https://cbonte.github.io/HAProxy-dconv/1.8/configuration.html#5.1-crt) document to get more informantion.
+The contents of `/path/to/certs` should contain the certificates and private keys **concatenated in one file** for any virtual hosts in use. See [HAProxy](https://cbonte.github.io/haproxy-dconv/1.8/configuration.html#5.1-crt) document to get more informantion.
 The certificate and keys should be named after the virtual host with **a `.pem` extension**.
 For example, a container with `VIRTUAL_HOST=foo.bar.com` should have a `foo.bar.com.pem` file in the certs directory.
 
@@ -200,9 +200,9 @@ By default, Docker is not able to mount directories on the host machine to conta
 #### Diffie-Hellman Groups (different from nginx-proxy)
 
 Diffie-Hellman groups are enabled by default.
-You can place a different `dhparam.pem` file at `/etc/HAProxy/certs/dhparam.pem` to override the default cert.
+You can place a different `dhparam.pem` file at `/etc/haproxy/certs/dhparam.pem` to override the default cert.
 To use custom `dhparam.pem` files per-virtual-host, **you should concatenate it together with the certificate and key**.
-For example, a container with `VIRTUAL_HOST=foo.bar.com` should have a **`foo.bar.com.pem`** file in the `/etc/HAProxy/certs`  directory, **containing certificate, key and dhparam in the file**. **If you have RSA and ECDSA version of certificate, both should add `dhparam.pem` in the file.**
+For example, a container with `VIRTUAL_HOST=foo.bar.com` should have a **`foo.bar.com.pem`** file in the `/etc/haproxy/certs`  directory, **containing certificate, key and dhparam in the file**. **If you have RSA and ECDSA version of certificate, both should add `dhparam.pem` in the file.**
 
 The file format would be (ECDSA version shown):
 ```
@@ -229,14 +229,14 @@ Qh/Dqggb+cpucC5S4yAmz2f4+FKxPhoa4wIBAg==
 -----END DH PARAMETERS-----
 ```
 
-> NOTE: If you don't have a `dhparam.pem` file at `/etc/HAProxy/dhparam/dhparam.pem`, **HAProxy would generate one automantically**.
+> NOTE: If you don't have a `dhparam.pem` file at `/etc/haproxy/dhparam/dhparam.pem`, **HAProxy would generate one automantically**.
 
 > COMPATIBILITY WARNING: The default generated `dhparam.pem` key is 2048 bits for A+ security.  Some 
 > older clients (like Java 6 and 7) do not support DH keys with over 1024 bits.  In order to support these
 > clients, you must either provide your own `dhparam.pem`, or tell `HA-proxy` to generate a 1024-bit
 > key on startup by passing `-e DHPARAM_BITS=1024`.
 
-In the separate container setup, **the offical [HAProxy](https://registry.hub.docker.com/_/HAProxy/) image will generate a
+In the separate container setup, **the offical [HAProxy](https://registry.hub.docker.com/_/haproxy/) image will generate a
 `dhparam` by its own. And you can also pass `DHPARAM_BITS` to the coresponding `docker-gen` container.**
 
 #### Wildcard Certificates
@@ -251,7 +251,7 @@ If your certificate(s) supports multiple domain names, you can start a container
 **Difference from nginx-proxy**
 
 If you have multiple version of shared certificated for RSA, DSA or/and ECDSA, you only need to care about the common name. For example, if you have certificates named `shared.pem.rsa` and `shared.pem.ecdsa`, you only need to set `CERT_NAME=shared.pem` to use both.
-You can see the [HAProxy](https://cbonte.github.io/HAProxy-dconv/1.8/configuration.html#5.1-crt) document for bundled certificate settings.
+You can see the [HAProxy](https://cbonte.github.io/haproxy-dconv/1.8/configuration.html#5.1-crt) document for bundled certificate settings.
 
 #### How SSL Support Works
 
@@ -311,7 +311,7 @@ response is to clear your browser's HSTS cache.
 ### Custom HAProxy Configuration (different from nginx-proxy)
 
 **Currently, you cannot add custom HAProxy configurations.**
-However, you can manually moddify the templates `HAProxy.tmpl` and `certs.tmpl` to change the default bahaviors.
+However, you can manually moddify the templates `haproxy.tmpl` and `certs.tmpl` to change the default bahaviors.
 
 ### Contributing
 
@@ -319,9 +319,9 @@ Before submitting pull requests or issues, please check github to make sure an e
 
 #### Running Tests Locally
 
-To run tests, you need to prepare the docker image to test which must be tagged `max-sum/ha-proxy:test`:
+To run tests, you need to prepare the docker image to test which must be tagged `gzmaxsum/ha-proxy:test`:
 
-    docker build -f Dockerfile -t max-sum/ha-proxy:test .  # build the Alpline variant image
+    docker build -f Dockerfile -t gzmaxsum/ha-proxy:test .  # build the Alpline variant image
 
 and call the [test/pytest.sh](test/pytest.sh) script again.
 
