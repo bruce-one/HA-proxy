@@ -1,8 +1,8 @@
 version: '2'
 services:
-  nginx-proxy:
-    image: jwilder/nginx-proxy
-    container_name: nginx-proxy
+  haproxy-proxy:
+    image: Max-Sum/haproxy-proxy
+    container_name: haproxy-proxy
     ports:
       - "80:80"
     volumes:

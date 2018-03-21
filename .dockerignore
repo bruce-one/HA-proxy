@@ -1,6 +1,8 @@
 .git
 .dockerignore
-circle.yml
+*.yml
+docker-gen-separate.conf
+LICENSE
 Makefile
 README.md
 test
