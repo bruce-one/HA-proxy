@@ -124,7 +124,6 @@ backend bk_{{ $host_name }}
 
         {{ range $knownNetwork := $CurrentContainer.Networks }}
             {{ range $containerNetwork := $container.Networks }}
-                {{$knownNetwork.Name}}
                 {{ if (and (ne $containerNetwork.Name "ingress") (or (eq $knownNetwork.Name $containerNetwork.Name) (eq $knownNetwork.Name "host"))) }}
                     ## Can be connected with "{{ $containerNetwork.Name }}" network
 
