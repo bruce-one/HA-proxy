@@ -125,8 +125,7 @@ backend bk_{{ $host_name }}
         {{ range $knownNetwork := $CurrentContainer.Networks }}
             {{ range $containerNetwork := $container.Networks }}
                 {{ if (and (ne $containerNetwork.Name "ingress") (or (eq $knownNetwork.Name $containerNetwork.Name) (eq $knownNetwork.Name "host"))) }}
-                    ## Can be connected with "{{ $containerNetwork.Name }}" network
-
+                ## Can be connected with "{{ $containerNetwork.Name }}" network
                     {{/* If only 1 port exposed, use that */}}
                     {{ if eq $addrLen 1 }}
                         {{ $address := index $container.Addresses 0 }}
@@ -149,7 +148,14 @@ backend bk_{{ $host_name }}
 
 frontend http
     mode http
-    {{ $https := false }}
+    {{ if $enable_ipv6 }}
+    bind :::80 v4v6 tfo defer-accept
+    bind :::443 v4v6 tfo defer-accept ssl allow-0rtt alpn h2,http/1.1 npn h2,http/1.1 crt-list /etc/haproxy/certs.list
+    {{ else }}
+    bind :80 tfo defer-accept
+    bind :443 tfo defer-accept ssl allow-0rtt alpn h2,http/1.1 npn h2,http/1.1 crt-list /etc/haproxy/certs.list
+    {{ end }}
+
     {{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
     {{ $host := trim $host }}
     {{ $is_regexp := hasPrefix "~" $host }}
@@ -170,32 +176,31 @@ frontend http
 
     {{/* Use the cert specified on the container or fallback to the best vhost match */}}
     {{ $cert := (coalesce $certName $vhostCert) }}
-    {{ $certExist := or (exists (printf "/etc/haproxy/certs/%s.pem" $cert)) (exists (printf "/etc/haproxy/certs/%s.pem.ecdsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.pem.rsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.pem.dsa" $cert)) }}
+    {{ $certExist := or (exists (printf "/etc/haproxy/certs/%s" $cert)) (exists (printf "/etc/haproxy/certs/%s.ecdsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.rsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.dsa" $cert)) }}
 
     {{ $is_https := (and (ne $https_method "nohttps") (ne $cert "") $certExist ) }}
 
     {{/* Create host matcher */}}
     {{ if $is_regexp }}
-        acl host_{{ $host_name }} hdr_reg(Host) -i {{ trimPrefix "~" $host }}
-        {{ if $is_https }}
-        acl host_{{ $host_name }}_sni ssl_fc_sni_reg -i {{ trimPrefix "~" $host }}
-        {{ end }}
+    acl host_{{ $host_name }} hdr_reg(Host) -i {{ trimPrefix "~" $host }}
+    {{ if $is_https }}
+    acl host_{{ $host_name }}_sni ssl_fc_sni_reg -i {{ trimPrefix "~" $host }}
+    {{ end }}
     {{ else if $is_suffix }}
-        acl host_{{ $host_name }} hdr_end(Host) -i {{ trimPrefix "*" $host }}
-        {{ if $is_https }}
-        acl host_{{ $host_name }}_sni ssl_fc_sni_end -i {{ trimPrefix "*" $host }}
-        {{ end }}
+    acl host_{{ $host_name }} hdr_end(Host) -i {{ trimPrefix "*" $host }}
+    {{ if $is_https }}
+    acl host_{{ $host_name }}_sni ssl_fc_sni_end -i {{ trimPrefix "*" $host }}
+    {{ end }}
     {{ else }}
-        acl host_{{ $host_name }} hdr(Host) -i {{ $host }}
-        {{ if $is_https }}
-        acl host_{{ $host_name }}_sni ssl_fc_sni -i {{ $host }}
-        {{ end }}
+    acl host_{{ $host_name }} hdr(Host) -i {{ $host }}
+    {{ if $is_https }}
+    acl host_{{ $host_name }}_sni ssl_fc_sni -i {{ $host }}
+    {{ end }}
     {{ end }}
 
     {{ if $is_https }}
-    {{ $https := true }}
     ## https
-    use_backend bk_{{$host_name}} if { host_{{$host_name}}_sni && ssl_fc }
+    use_backend bk_{{$host_name}} if host_{{$host_name}}_sni && { ssl_fc }
     {{ end }}
     ## http
     {{ if and $is_https (eq $https_method "redirect") }}
@@ -205,15 +210,3 @@ frontend http
     {{ end }}
     {{ end }}
     {{/* end range */}}
-
-    {{ if $enable_ipv6 }}
-    bind :::80 v4v6 tfo defer-accept
-    {{ if $https }}
-    bind :::443 v4v6 tfo defer-accept ssl allow-0rtt alpn h2,http/1.1 npn h2,http/1.1 crt-list /etc/haproxy/certs.list
-    {{ end }}
-    {{ else }}
-    bind :80 tfo defer-accept
-    {{ if $https }}
-    bind :443 tfo defer-accept ssl allow-0rtt alpn h2,http/1.1 npn h2,http/1.1 crt-list /etc/haproxy/certs.list
-    {{ end }}
-    {{ end }}

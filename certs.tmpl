@@ -32,12 +32,14 @@
     {{ $vhostCert := (closest (dir "/etc/haproxy/certs") (printf "%s.pem" $host))}}
 
     {{/* use bundling if multiple certs is found */}}
-    {{ $vhostCert := trimSuffix ".pem.ecdsa" $vhostCert }}
-    {{ $vhostCert := trimSuffix ".pem.rsa" $vhostCert }}
-    {{ $vhostCert := trimSuffix ".pem.dsa" $vhostCert }}
+    {{ $vhostCert := trimSuffix ".ecdsa" $vhostCert }}
+    {{ $vhostCert := trimSuffix ".rsa" $vhostCert }}
+    {{ $vhostCert := trimSuffix ".dsa" $vhostCert }}
 
     {{/* Use the cert specified on the container or fallback to the best vhost match */}}
     {{ $cert := (coalesce $certName $vhostCert) }}
 
-    {{ $cert }} [{{$ssl_option}}]
+    {{ if or $cert false }}
+    /etc/haproxy/certs/{{ $cert }} [{{$ssl_option}}]
+    {{end}}
 {{ end }}
