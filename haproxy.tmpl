@@ -45,12 +45,12 @@ defaults
     option forwardfor
     retries 3
     backlog 4096
-    timeout client          20s
-    timeout client-fin      20s
+    timeout client          1m
+    timeout client-fin      30s
     timeout connect         5s
-    timeout server          20s
+    timeout server          30s
     timeout tunnel          15m
-    timeout http-keep-alive 30s
+    timeout http-keep-alive 15s
     timeout http-request    10s
     timeout queue           5s
     timeout tarpit          60s
@@ -97,6 +97,9 @@ defaults
 {{/* Get the HSTS defined by containers w/ the same vhost, falling back to "max-age=31536000" */}}
 {{ $hsts := or (first (groupByKeys $containers "Env.HSTS")) "max-age=31536000" }}
 
+{{/* Get the CONNECTION defined by containers w/ the same vhost, falling back to "server-close" */}}
+{{ $connection := or (first (groupByKeys $containers "Env.CONNECTION")) "server-close" }}
+
 backend bk_{{ $host_name }}
     {{ if eq $network_tag "internal" }}
     # Only allow traffic from internal clients
@@ -116,6 +119,22 @@ backend bk_{{ $host_name }}
 
     {{ if (and (ne $https_method "noredirect") (ne $hsts "off")) }}
     http-response set-header Strict-Transport-Security "{{ trim $hsts }}"
+    {{ end }}
+
+    {{ if (eq $connection "keep-alive") }}
+    # Keep-alive to backend service
+    option http-keep-alive
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 1m
+    {{ else if (eq $connection "tunnel") }}
+    option http-tunnel
+    {{ else if (eq $connection "close") }}
+    option httpclose
+    timeout client          15m
+    timeout client-fin      10s
+    timeout server          15m
+    timeout http-keep-alive 15m
     {{ end }}
 
     balance roundrobin
