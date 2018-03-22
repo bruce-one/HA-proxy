@@ -73,6 +73,7 @@ defaults
 
     {{ $certExist := or (exists (printf "/etc/haproxy/certs/%s" $cert)) (exists (printf "/etc/haproxy/certs/%s.ecdsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.rsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.dsa" $cert)) }}
     {{ $is_https := (and (ne $https_method "nohttps") (ne $cert "") $certExist ) }}
+    {{ $is_http  := ne $https_method "nohttp" }}
 
     {{/* Give a name to the host rules */}}
     {{ $is_regexp := hasPrefix "~" .Host }}
@@ -81,17 +82,23 @@ defaults
 
     {{/* Create host acl rules */}}
     {{ if $is_regexp }}
+        {{ if $is_http }}
         acl host_{{ $host_name }} hdr_reg(Host) -i {{ trimPrefix "~" .Host }}
+        {{ end }}
         {{ if $is_https }}
         acl host_{{ $host_name }}_sni ssl_fc_sni_reg -i {{ trimPrefix "~" .Host }}
         {{ end }}
     {{ else if $is_suffix }}
+        {{ if $is_http }}
         acl host_{{ $host_name }} hdr_end(Host) -i {{ trimPrefix "*" .Host }}
+        {{ end }}
         {{ if $is_https }}
         acl host_{{ $host_name }}_sni ssl_fc_sni_end -i {{ trimPrefix "*" .Host }}
         {{ end }}
     {{ else }}
+        {{ if $is_http }}
         acl host_{{ $host_name }} hdr(Host) -i {{ .Host }}
+        {{ end }}
         {{ if $is_https }}
         acl host_{{ $host_name }}_sni ssl_fc_sni -i {{ .Host }}
         {{ end }}
