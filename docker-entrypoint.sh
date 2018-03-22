@@ -26,4 +26,7 @@ if [ "$socketMissing" = 1 -a "$1" = forego -a "$2" = start -a "$3" = '-r' ]; the
 	exit 1
 fi
 
+# Run HAProxy as daemon
+haproxy -W -D -f /etc/haproxy/haproxy.cfg -p /var/run/haproxy.pid
+
 exec "$@"
