@@ -174,11 +174,8 @@ Finally, start your containers with `ha-proxy.host` label.
     $ docker run -l ha-proxy.host=foo.bar.com  ...
 
 ### SSL Support using letsencrypt (different from nginx-proxy)
-### SSL Support using letsencrypt (different from nginx-proxy)
 
-**This module is under development**
-
-[letsencrypt-nginx-proxy-companion](https://github.com/JrCs/docker-letsencrypt-nginx-proxy-companion) is a lightweight companion container for the nginx-proxy. It allow the creation/renewal of Let's Encrypt certificates automatically. 
+HA-proxy provides a hook for ACME-compatible clients. Any container that has the label `ha-proxy.acme-provider` set would receive requests for /.well-known/acme-challenge/ URL. ACME provider container could also set `ha-proxy.proto` and `ha-proxy.port` like normal ones.
 
 ### SSL Support (different from nginx-proxy)
 
