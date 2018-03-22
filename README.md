@@ -1,6 +1,6 @@
 ![HAProxy 1.8](https://img.shields.io/badge/HAProxy-1.8-brightgreen.svg) ![License MIT](https://img.shields.io/badge/license-MIT-blue.svg) [![](https://img.shields.io/docker/stars/gzmaxsum/ha-proxy.svg)](https://hub.docker.com/r/gzmaxsum/ha-proxy 'DockerHub') [![](https://img.shields.io/docker/pulls/gzmaxsum/ha-proxy.svg)](https://hub.docker.com/r/gzmaxsum/ha-proxy 'DockerHub')
 
-This is HAProxy flavor of [nginx-proxy][1]. Please look through the readme before you use, there is some difference in configuration from nginx-proxy, which will be shown in bold font.
+This is HAProxy flavor of [nginx-proxy][1]. Please look through the readme before you use, there is some difference in configuration from nginx-proxy. If you came from nginx-proxy, you should see the last capter **Major Difference from nginx-proxy** at last.
 
 HA-proxy sets up a container running HAProxy and [docker-gen][2].  docker-gen generates reverse proxy configs for HAProxy and reloads HAProxy when containers are started and stopped.
 
@@ -12,13 +12,13 @@ To run it:
 
     $ docker run -d -p 80:80 -v /var/run/docker.sock:/tmp/docker.sock:ro gzmaxsum/ha-proxy
 
-Then start any containers you want proxied with an env var `VIRTUAL_HOST=subdomain.youdomain.com`
+Then start any containers you want proxied with an label `ha-proxy.host=subdomain.youdomain.com`
 
-    $ docker run -e VIRTUAL_HOST=foo.bar.com  ...
+    $ docker run -l ha-proxy.host=foo.bar.com  ...
 
 The containers being proxied must [expose](https://docs.docker.com/engine/reference/run/#expose-incoming-ports) the port to be proxied, either by using the `EXPOSE` directive in their `Dockerfile` or by using the `--expose` flag to `docker run` or `docker create`.
 
-Provided your DNS is setup to forward foo.bar.com to the host running HA-proxy, the request will be routed to a container with the VIRTUAL_HOST env var set.
+Provided your DNS is setup to forward foo.bar.com to the host running HA-proxy, the request will be routed to a container with the ha-proxy.host label set.
 
 ### Image variants
 
@@ -45,8 +45,8 @@ services:
 
   whoami:
     image: jwilder/whoami
-    environment:
-      - VIRTUAL_HOST=whoami.local
+    labels:
+      ha-proxy.host: whoami.local
 
 ```
 
@@ -64,11 +64,11 @@ You can activate the IPv6 support for the HA-proxy container by passing the valu
 
 ### Multiple Ports
 
-If your container exposes multiple ports, HA-proxy will default to the service running on port 80.  If you need to specify a different port, you can set a VIRTUAL_PORT env var to select a different one.  If your container only exposes one port and it has a VIRTUAL_HOST env var set, that port will be selected.
+If your container exposes multiple ports, HA-proxy will default to the service running on port 80.  If you need to specify a different port, you can set a `ha-proxy.host` label to select a different one.  If your container only exposes one port and it has a `ha-proxy.host` label set, that port will be selected.
 
-  [1]: https://github.com/jwilder/nginx-proxy
-  [2]: https://github.com/jwilder/docker-gen
-  [3]: http://jasonwilder.com/blog/2014/03/25/automated-nginx-reverse-proxy-for-docker/
+[1]: https://github.com/jwilder/nginx-proxy
+[2]: https://github.com/jwilder/docker-gen
+[3]: http://jasonwilder.com/blog/2014/03/25/automated-nginx-reverse-proxy-for-docker/
 
 ### Multiple Hosts
 
@@ -94,7 +94,7 @@ In this example, the `my-ha-proxy` container will be connected to `my-network` a
 
 ### Internet vs. Local Network Access (different from nginx-proxy)
 
-If you allow traffic from the public internet to access your `ha-proxy` container, you may want to restrict some containers to the internal network only, so they cannot be accessed from the public internet.  On containers that should be restricted to the internal network, you should set the environment variable `NETWORK_ACCESS=internal`.  By default, the *internal* network is defined as `127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16`. **Currently, no custom settings for internal network is available.**
+If you allow traffic from the public internet to access your `ha-proxy` container, you may want to restrict some containers to the internal network only, so they cannot be accessed from the public internet.  On containers that should be restricted to the internal network, you should set the label `ha-proxy.network_access=internal`.  By default, the *internal* network is defined as `127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16`. **Currently, no custom settings for internal network is available.**
 
 When internal-only access is enabled, external clients with be denied with an `HTTP 403 Forbidden`
 
@@ -108,24 +108,24 @@ There are 4 modes of connection:
 
 1. Tunnel
 This mode disables any HTTP processing past the first request and the first response. Therefor, the connection would not be actively closed by HAProxy and will maintained forever unless closed by any terminal. If the client request to upgrade to WebSocket, HAProxy will switch to this mode.
-To use this mode explicitly, set the environment variable `CONNECTION=tunnel`.
+To use this mode explicitly, set the label `ha-proxy.connection=tunnel`.
 2. Keep-Alive
 In this mode, HAProxy will try to persist connection. For each connection it processes each request and response, and leaves the connection idle on both sides between the end of a response and the start of a new request. However, there is a timeout to disconnect if the connection is idle for a set period of time.
-To use this mode explicitly, set the environment variable `CONNECTION=keep-alive`.
+To use this mode explicitly, set the label `ha-proxy.connection=keep-alive`.
 3. Server-Close (Default)
 This mode close connections on the server side immediately while keeping the ability to support HTTP keep-alive and pipelining on the client side. This provides the lowest latency on the client side (slow network) and the fastest session reuse on the server side to save server resources. This is the default mode in HA-proxy.
-To use this mode explicitly, set the environment variable `CONNECTION=server-close`.
+To use this mode explicitly, set the label `ha-proxy.connection=server-close`.
 4. Close
 In this mode, HAProxy would check if a "Connection: close" header is already set in each direction, and will add one if missing. Each end should react to this by actively closing the TCP connection after each transfer, thus resulting in a switch to the HTTP close mode.
-To use this mode explicitly, set the environment variable `CONNECTION=close`.
+To use this mode explicitly, set the label `ha-proxy.connection=close`.
 
 These modes are an extension of `option http-tunnel`, `option http-keep-alive`, `option http-server-close` and `option httpclose` in HAProxy configuration. Check [HAProxy](https://cbonte.github.io/haproxy-dconv/1.8/configuration.html#option%20http-server-close) document to have further understanding on different modes.
 
 ### SSL Backends
 
-If you would like the reverse proxy to connect to your backend using HTTPS instead of HTTP, set `VIRTUAL_PROTO=https` on the backend container.
+If you would like the reverse proxy to connect to your backend using HTTPS instead of HTTP, set `ha-proxy.proto=https` on the backend container.
 
-> Note: If you use `VIRTUAL_PROTO=https` and your backend container exposes port 80 and 443, `nginx-proxy` will use HTTPS on port 80.  This is almost certainly not what you want, so you should also include `VIRTUAL_PORT=443`.
+> Note: If you use `ha-proxy.proto=https` and your backend container exposes port 80 and 443, `nginx-proxy` will use HTTPS on port 80.  This is almost certainly not what you want, so you should also include `ha-proxy.port=443`.
 
 
 ### Default Host
@@ -133,6 +133,8 @@ If you would like the reverse proxy to connect to your backend using HTTPS inste
 To set the default host for HAProxy use the env var `DEFAULT_HOST=foo.bar.com` for example
 
     $ docker run -d -p 80:80 -e DEFAULT_HOST=foo.bar.com -v /var/run/docker.sock:/tmp/docker.sock:ro gzmaxsum/ha-proxy
+
+> Note: Default host support only regular domain. Multiple host, regular expression and wildcard domain is not supported. If you have used regular expression or wildcard in container and want to use it as default host, an additional plain domain is need to set on the container. Default host should exactly match (one of) the host. 
 
 ### Separate Containers (different from nginx-proxy)
 
@@ -166,12 +168,12 @@ Then start haproxy with the shared volume:
 
     $ docker run -d -p 80:80 --name haproxy -v /tmp/haproxy:/etc/haproxy -t haproxy:alpine
 
+Finally, start your containers with `ha-proxy.host` label.
+Finally, start your containers with `ha-proxy.host` label.
 
-Finally, start your containers with `VIRTUAL_HOST` environment variables.
+    $ docker run -l ha-proxy.host=foo.bar.com  ...
 
-    $ docker run -e VIRTUAL_HOST=foo.bar.com  ...
-
-
+### SSL Support using letsencrypt (different from nginx-proxy)
 ### SSL Support using letsencrypt (different from nginx-proxy)
 
 **This module is under development**
@@ -188,9 +190,9 @@ To enable SSL:
 
 The contents of `/path/to/certs` should contain the certificates and private keys **concatenated in one file** for any virtual hosts in use. See [HAProxy](https://cbonte.github.io/haproxy-dconv/1.8/configuration.html#5.1-crt) document to get more informantion.
 The certificate and keys should be named after the virtual host with **a `.pem` extension**.
-For example, a container with `VIRTUAL_HOST=foo.bar.com` should have a `foo.bar.com.pem` file in the certs directory.
+For example, a container with `ha-proxy.host=foo.bar.com` should have a `foo.bar.com.pem` file in the certs directory.
 
-**If you have muliple certificates for different cipher suites (RSA, DSA, ECDSA) used by one virtual host, you should name them with `.pem.rsa`, `.pem.dsa` or `.pem.ecdsa` accordingly. Noted that the suffix after `.pem` is not recognized as a part of `CERT_NAME`. See the SNI part below.**
+> Note: If you have muliple certificates for different cipher suites (RSA, DSA, ECDSA) used by one virtual host, you should name them with `.pem.rsa`, `.pem.dsa` or `.pem.ecdsa` accordingly. Noted that the suffix after `.pem` is not recognized as a part of `CERT_NAME`. See the SNI part below.
 
 If you are running the container in a virtualized environment (Hyper-V, VirtualBox, etc...), /path/to/certs must exist in that environment or be made accessible to that environment.
 By default, Docker is not able to mount directories on the host machine to containers running in a virtual machine.
@@ -200,7 +202,7 @@ By default, Docker is not able to mount directories on the host machine to conta
 Diffie-Hellman groups are enabled by default.
 You can place a different `dhparam.pem` file at `/etc/haproxy/certs/dhparam.pem` to override the default cert.
 To use custom `dhparam.pem` files per-virtual-host, **you should concatenate it together with the certificate and key**.
-For example, a container with `VIRTUAL_HOST=foo.bar.com` should have a **`foo.bar.com.pem`** file in the `/etc/haproxy/certs`  directory, **containing certificate, key and dhparam in the file**. **If you have RSA and ECDSA version of certificate, both should add `dhparam.pem` in the file.**
+For example, a container with `ha-proxy.host=foo.bar.com` should have a **`foo.bar.com.pem`** file in the `/etc/haproxy/certs`  directory, **containing certificate, key and dhparam in the file**. **If you have RSA and ECDSA version of certificate, both should add `dhparam.pem` in the file.**
 
 The file format would be (ECDSA version shown):
 ```
@@ -239,12 +241,12 @@ In the separate container setup, **the offical [HAProxy](https://registry.hub.do
 
 #### Wildcard Certificates
 
-Wildcard certificates and keys should be named after the domain name with a `.crt` and `.key` extension.
-For example `VIRTUAL_HOST=foo.bar.com` would use cert name `bar.com.crt` and `bar.com.key`.
+Wildcard certificates and keys should be named after the domain name with a `.pem` extension.
+For example `ha-proxy.host=foo.bar.com` would use cert name `bar.com.pem`.
 
 #### SNI (different from nginx-proxy)
 
-If your certificate(s) supports multiple domain names, you can start a container with `CERT_NAME=<name>` to identify the certificate to be used.  For example, a certificate for `*.foo.com` and `*.bar.com` could be named **`shared.pem`**.  A container running with `VIRTUAL_HOST=foo.bar.com` and **`CERT_NAME=shared.pem`** will then use this shared cert.
+If your certificate(s) supports multiple domain names, you can start a container with `CERT_NAME=<name>` to identify the certificate to be used.  For example, a certificate for `*.foo.com` and `*.bar.com` could be named **`shared.pem`**.  A container running with `ha-proxy.host=foo.bar.com` and **`ha-proxy.cert_name=shared.pem`** will then use this shared cert.
 
 **Difference from nginx-proxy**
 
@@ -262,11 +264,11 @@ included because the following browsers will stop working when it is removed: Ch
 IE < 11, Safari < 7, iOS < 5, Android Browser < 5.
 
 If you don't require backward compatibility, you can use the [Mozilla modern profile](https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility)
-profile instead by including the environment variable `SSL_POLICY=Mozilla-Modern` to your container.
+profile instead by including the label `ha-proxy.ssl_policy=Mozilla-Modern` to your container.
 This profile is compatible with clients back to Firefox 27, Chrome 30, IE 11 on Windows 7,
 Edge, Opera 17, Safari 9, Android 5.0, and Java 8.
 
-Other policies available through the `SSL_POLICY` environment variable are [`Mozilla-Old`](https://wiki.mozilla.org/Security/Server_Side_TLS#Old_backward_compatibility)
+Other policies available through the `ha-proxy.ssl_policy` label are [`Mozilla-Old`](https://wiki.mozilla.org/Security/Server_Side_TLS#Old_backward_compatibility)
 and the [AWS ELB Security Policies](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-security-policy-table.html)
 `AWS-TLS-1-2-2017-01`, `AWS-TLS-1-1-2017-01`, `AWS-2016-08`, `AWS-2015-05`, `AWS-2015-03` and `AWS-2015-02`.
 
@@ -285,22 +287,11 @@ to establish a connection.  A self-signed or generic cert named `default.crt` an
 will allow a client browser to make a SSL connection (likely w/ a warning) and subsequently receive
 a 500.
 
-To serve traffic in both SSL and non-SSL modes without redirecting to SSL, you can include the
-environment variable `HTTPS_METHOD=noredirect` (the default is `HTTPS_METHOD=redirect`).  You can also
-disable the non-SSL site entirely with `HTTPS_METHOD=nohttp`, or disable the HTTPS site with 
-`HTTPS_METHOD=nohttps`. `HTTPS_METHOD` must be specified on each container for which you want to 
-override the default behavior.  If `HTTPS_METHOD=noredirect` is used, Strict Transport Security (HSTS) 
-is disabled to prevent HTTPS users from being redirected by the client.  If you cannot get to the HTTP 
-site after changing this setting, your browser has probably cached the HSTS policy and is automatically 
-redirecting you back to HTTPS.  You will need to clear your browser's HSTS cache or use an incognito 
-window / different browser.
+To serve traffic in both SSL and non-SSL modes without redirecting to SSL, you can include thelabel `ha-proxy.https_method=noredirect` (the default is `ha-proxy.https_method=redirect`).  You can also disable the non-SSL site entirely with `ha-proxy.https_method=nohttp`, or disable the HTTPS site with `ha-proxy.https_method=nohttps`. `ha-proxy.https_method` must be specified on each container for which you want to override the default behavior.  If `ha-proxy.https_method=noredirect` is used, Strict Transport Security (HSTS) is disabled to prevent HTTPS users from being redirected by the client.  If you cannot get to the HTTP site after changing this setting, your browser has probably cached the HSTS policy and is automatically redirecting you back to HTTPS.  You will need to clear your browser's HSTS cache or use an incognito window / different browser.
 
 By default, [HTTP Strict Transport Security (HSTS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security) 
-is enabled with `max-age=31536000` for HTTPS sites.  You can disable HSTS with the environment variable 
-`HSTS=off` or use a custom HSTS configuration like `HSTS=max-age=31536000; includeSubDomains; preload`.  
-*WARNING*: HSTS will force your users to visit the HTTPS version of your site for the `max-age` time - 
-even if they type in `http://` manually.  The only way to get to an HTTP site after receiving an HSTS 
-response is to clear your browser's HSTS cache.
+is enabled with `max-age=31536000` for HTTPS sites.  You can disable HSTS with the label `ha-proxy.hsts=off` or use a custom HSTS configuration like `HSTS=max-age=31536000; includeSubDomains; preload`.  
+*WARNING*: HSTS will force your users to visit the HTTPS version of your site for the `max-age` time - even if they type in `http://` manually.  The only way to get to an HTTP site after receiving an HSTS response is to clear your browser's HSTS cache.
 
 ### Basic Authentication Support (different from nginx-proxy)
 
@@ -327,6 +318,44 @@ and call the [test/pytest.sh](test/pytest.sh) script again.
 If your system has the `make` command, you can automate those tasks by calling:
 
     make test
-    
 
 You can learn more about how the test suite works and how to write new tests in the [test/README.md](test/README.md) file.
+You can learn more about how the test suite works and how to write new tests in the [test/README.md](test/README.md) file.
+
+### Major difference from nginx-proxy
+
+Due to the HAProxy configuration, some of behavior of HA-proxy is different from nginx-proxy.
+
+Feature added:
+
+- Connection option
+- Health check (HAProxy nature)
+
+Feature removed:
+
+- Custom configuration (per host / default location / proxy)
+- Wildcard host (Only support wildcard in the beginning)
+- Let's Encrypt (developing)
+
+Behavior difference:
+
+- Use labels instead of environment variables (except for ha-proxy container)
+See the table below
+- Format of SSL/TLS Certifiate and DH parm is different.
+
+#### Comparison Tabel
+
+| nginx-proxy        | HA-proxy                      |
+| ------------------ | ----------------------------- |
+| Env.VIRTUAL_HOST   | Label.ha-proxy.host           |
+| Env.VIRTUAL_PORT   | Label.ha-proxy.port           |
+| Env.VIRTUAL_PROTO  | Label.ha-proxy.proto          |
+| Env.HTTPS_METHOD   | Label.ha-proxy.https_method   |
+| Env.HSTS           | Label.ha-proxy.hsts           |
+| Env.CERT_NAME      | Label.ha-proxy.cert_name      |
+| Env.SSL_POLICY     | Label.ha-proxy.ssl_policy     |
+| Env.NETWORK_ACCESS | Label.ha-proxy.network_access |
+| N/A                | Label.ha-proxy.connection     |
+| Env.ENABLE_IPV6    | Env.ENABLE_IPV6               |
+| Env.DEFAULT_HOST   | Env.DEFAULT_HOST              |
+
