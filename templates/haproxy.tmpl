@@ -192,11 +192,11 @@ frontend http
 
     {{ if $is_https }}
     ## https
-    use_backend bk_{{$host_name}} if host_{{$host_name}}_sni && { ssl_fc }
+    use_backend bk_{{$host_name}} if { ssl_fc } && host_{{$host_name}}_sni
     {{ end }}
     ## http
     {{ if and $is_https (eq $https_method "redirect") }}
-    redirect scheme https if host_{{$host_name}}
+    redirect scheme https code 301 if host_{{$host_name}}
     {{ else if or (not $is_https) (eq $https_method "noredirect") }}
     use_backend bk_{{$host_name}} if host_{{$host_name}}
     {{ end }}
