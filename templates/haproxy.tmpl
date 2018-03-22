@@ -153,28 +153,34 @@ frontend http
     acl safe_method method GET HEADER CONNECT OPTIONS TRACE
     http-request deny deny_status 425 if { ssl_fc_has_early } !safe_method
 
+    {{/* Get Default Host setting from environment */}}
+    {{ $default_host := or ($.Env.DEFAULT_HOST) "" }}
+    {{ $default_host := trim $default_host }}
+
+    {{/* Per host setting */}}
     {{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
     {{ $host := trim $host }}
     {{ $is_regexp := hasPrefix "~" $host }}
     {{ $is_suffix := hasPrefix "*" $host }}
     {{ $host_name := when $is_regexp (sha1 $host) (when $is_suffix (replace $host "*" "." 1) $host) }}
     # {{ $host_name }}
+
+    {{ if eq $host $default_host }}
+    ## Default host
+    default_backend bk_{{ $host_name }}
+    {{ end }}
+
     {{/* Get the HTTPS_METHOD defined by containers w/ the same vhost, falling back to "redirect" */}}
     {{ $https_method := or (first (groupByKeys $containers "Env.HTTPS_METHOD")) "redirect" }}
-
     {{/* Get the HSTS defined by containers w/ the same vhost, falling back to "max-age=31536000" */}}
     {{ $hsts := or (first (groupByKeys $containers "Env.HSTS")) "max-age=31536000" }}
-
     {{/* Get the first cert name defined by containers w/ the same vhost */}}
     {{ $certName := (first (groupByKeys $containers "Env.CERT_NAME")) }}
-
     {{/* Get the best matching cert  by name for the vhost. */}}
     {{ $vhostCert := (closest (dir "/etc/haproxy/certs") (printf "%s.pem" $host))}}
-
     {{/* Use the cert specified on the container or fallback to the best vhost match */}}
     {{ $cert := (coalesce $certName $vhostCert) }}
     {{ $certExist := or (exists (printf "/etc/haproxy/certs/%s" $cert)) (exists (printf "/etc/haproxy/certs/%s.ecdsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.rsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.dsa" $cert)) }}
-
     {{ $is_https := (and (ne $https_method "nohttps") (ne $cert "") $certExist ) }}
 
     {{/* Create host matcher */}}
