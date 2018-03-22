@@ -83,9 +83,9 @@ backend bk_{{ $host_name }}
     {{ end }}
 
     http-request set-header X-Real-IP %[src]
-    http-request set-header X-Forwarded-Ssl off
+    http-request set-header X-Forwarded-Ssl off if !{ ssl_fc }
     http-request set-header X-Forwarded-Ssl on if { ssl_fc }
-    http-request set-header X-Forwarded-Proto http
+    http-request set-header X-Forwarded-Proto http if !{ ssl_fc }
     http-request set-header X-Forwarded-Proto https if { ssl_fc }
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request del-header Proxy
@@ -147,6 +147,8 @@ frontend http
     bind :80 tfo defer-accept
     bind :443 tfo defer-accept ssl allow-0rtt alpn h2,http/1.1 npn h2,http/1.1 crt-list /etc/haproxy/certs.list
     {{ end }}
+    acl http  ssl_fc,not
+    acl https ssl_fc
 
     {{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
     {{ $host := trim $host }}
@@ -192,13 +194,13 @@ frontend http
 
     {{ if $is_https }}
     ## https
-    use_backend bk_{{$host_name}} if { ssl_fc } && host_{{$host_name}}_sni
+    use_backend bk_{{$host_name}} if https host_{{$host_name}}_sni
     {{ end }}
     ## http
     {{ if and $is_https (eq $https_method "redirect") }}
-    redirect scheme https code 301 if host_{{$host_name}}
+    redirect scheme https code 301 if http host_{{$host_name}}
     {{ else if or (not $is_https) (eq $https_method "noredirect") }}
-    use_backend bk_{{$host_name}} if host_{{$host_name}}
+    use_backend bk_{{$host_name}} if http host_{{$host_name}}
     {{ end }}
     {{ end }}
     {{/* end range */}}
