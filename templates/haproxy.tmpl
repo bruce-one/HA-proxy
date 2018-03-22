@@ -149,6 +149,8 @@ frontend http
     {{ end }}
     acl http  ssl_fc,not
     acl https ssl_fc
+    acl safe_method method GET HEADER CONNECT OPTIONS TRACE
+    http-request deny deny_status 425 if { ssl_fc_has_early } !safe_method
 
     {{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
     {{ $host := trim $host }}
