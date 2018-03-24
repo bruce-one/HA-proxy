@@ -14,11 +14,15 @@
 {{ $vhostCert := trimSuffix ".ecdsa" $vhostCert }}
 {{ $vhostCert := trimSuffix ".rsa" $vhostCert }}
 {{ $vhostCert := trimSuffix ".dsa" $vhostCert }}
+{{/* ensure the cert ends with .pem */}}
+{{ $vhostCert := when (hasSuffix ".pem" $vhostCert) $vhostCert nil }}
 
 {{/* Use the cert specified on the container or fallback to the best vhost match */}}
 {{ $cert := (coalesce $certName $vhostCert) }}
+{{/* ensure the cert exist */}}
+{{ $certExist := and $cert (or (exist (printf "/etc/haproxy/certs/%s" $cert)) (exist (printf "/etc/haproxy/certs/%s.ecdsa" $cert)) (exist (printf "/etc/haproxy/certs/%s.rsa" $cert)) (exist (printf "/etc/haproxy/certs/%s.dsa" $cert))) }}
 
-{{ if or $cert false }}
+{{ if $certExist }}
     {{ if eq $ssl_policy "Mozilla-Modern" }}
         {{ $cert }} [ssl-min-ver TLSv1.2 ciphers ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256]
     {{ else if eq $ssl_policy "Mozilla-Intermediate" }}

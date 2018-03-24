@@ -71,11 +71,17 @@ defaults
 
     {{/* Get the best matching cert  by name for the vhost. */}}
     {{ $vhostCert := (closest (dir "/etc/haproxy/certs") (printf "%s.pem" .Host))}}
+    {{/* use bundling if multiple certs is found */}}
+    {{ $vhostCert := trimSuffix ".ecdsa" $vhostCert }}
+    {{ $vhostCert := trimSuffix ".rsa" $vhostCert }}
+    {{ $vhostCert := trimSuffix ".dsa" $vhostCert }}
+    {{/* ensure the cert ends with .pem */}}
+    {{ $vhostCert := when (hasSuffix ".pem" $vhostCert) $vhostCert nil }}
 
     {{/* Use the cert specified on the container or fallback to the best vhost match */}}
     {{ $cert := (coalesce $certName $vhostCert) }}
 
-    {{ $certExist := or (exists (printf "/etc/haproxy/certs/%s" $cert)) (exists (printf "/etc/haproxy/certs/%s.ecdsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.rsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.dsa" $cert)) }}
+    {{ $certExist := and $cert (or (exists (printf "/etc/haproxy/certs/%s" $cert)) (exists (printf "/etc/haproxy/certs/%s.ecdsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.rsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.dsa" $cert))) }}
     {{ $is_https := (and (ne $https_method "nohttps") (ne $cert "") $certExist ) }}
     {{ $is_http  := ne $https_method "nohttp" }}
 
