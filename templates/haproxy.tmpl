@@ -9,7 +9,7 @@ global
     # Default dhparam
     ssl-dh-param-file /etc/haproxy/certs/dhparam.pem
     {{ end }}
-    {{ if $.Env.ACME_ENABLED }}
+    {{ if $.Env.ENABLE_ACME }}
     lua-load /etc/haproxy/acme-webroot.lua
     {{ end }}
 defaults
