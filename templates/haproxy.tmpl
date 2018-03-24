@@ -218,10 +218,10 @@ frontend http
     # Only safe method supported in 0rtt
     acl safe_method method GET HEADER CONNECT OPTIONS TRACE
     http-request deny deny_status 425 if { ssl_fc_has_early } !safe_method
-    {{ if $.Env.ACME_ENABLED }}
     # ACME service
-        acl acme_challenge path_beg /.well-known/acme-challenge/
-        http-request use-service lua.acme-http01 if METH_GET acme_challenge
+    acl acme_challenge path_beg /.well-known/acme-challenge/
+    {{ if $.Env.ACME_ENABLED }}
+    http-request use-service lua.acme-http01 if METH_GET acme_challenge
     {{ end }}
 
     acl http  ssl_fc,not
