@@ -202,6 +202,13 @@ backend bk_{{ $host_name }}
                         {{ $address := where $container.Addresses "Port" $port | first }}
                         {{ template "backend" (dict "Container" $container "Address" $address "Network" $containerNetwork "HealthCheck" true) }}
                     {{ end }}
+                    {{/* fixed host network */}}
+                    {{ if (eq $containerNetwork.Name "host") }}
+                        {{ $port := coalesce (index $container.Labels "ha-proxy.port") "80" }}
+                        {{ $address := dict "Port" $port }}
+                        {{ $network := dict "IP" "127.0.0.1" }}
+                        {{ template "backend" (dict "Container" $container "Address" $address "Network" $network "HealthCheck" true) }}
+                    {{ end }}
                 {{ end }}
             {{ end }}
         {{ end }}
