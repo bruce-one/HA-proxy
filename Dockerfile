@@ -11,7 +11,7 @@ RUN apk add --no-cache --virtual .run-deps \
     && mv /app/haproxy.cfg /etc/haproxy/ \
     && mv /app/acme-webroot.lua /etc/haproxy/
 
-ENV DOCKER_GEN_VERSION 0.7.3
+ENV DOCKER_GEN_VERSION 0.7.4
 
 RUN wget --quiet https://github.com/jwilder/docker-gen/releases/download/$DOCKER_GEN_VERSION/docker-gen-alpine-linux-amd64-$DOCKER_GEN_VERSION.tar.gz \
  && tar -C /usr/local/bin -xvzf docker-gen-alpine-linux-amd64-$DOCKER_GEN_VERSION.tar.gz \
