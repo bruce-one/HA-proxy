@@ -164,11 +164,13 @@ $ docker run \
     -t jwilder/docker-gen -config /etc/docker-gen/docker-gen.conf
 ```
 
-Then start haproxy with the shared volume:
-
-    $ docker run -d -p 80:80 --name haproxy -v /tmp/haproxy:/etc/haproxy -t haproxy:alpine
-
-Finally, start your containers with `ha-proxy.host` label.
+Then start haproxy with the shared volume and `ha-proxy.haproxy` label:
+```
+$ docker run -d -p 80:80 --name haproxy \
+    -v /tmp/haproxy:/etc/haproxy \
+    -l ha-proxy.haproxy:true \
+    -t haproxy:alpine
+```
 Finally, start your containers with `ha-proxy.host` label.
 
     $ docker run -l ha-proxy.host=foo.bar.com  ...

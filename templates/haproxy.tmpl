@@ -34,7 +34,7 @@ defaults
     timeout tarpit          60s
     default-server inter 3s rise 2 fall 3
 
-{{ $CurrentContainer := where $ "ID" .Docker.CurrentContainerID | first }}
+{{ $CurrentContainer := whereLabelExists $ "ha-proxy.haproxy" | first }}
 
 {{ define "backend" }}
     {{/* Get the proto defined by container */}}

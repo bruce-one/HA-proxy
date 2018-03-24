@@ -1,6 +1,8 @@
 FROM haproxy:1.8-alpine
 LABEL maintainer="Max Sum <max@lolyculture.com>"
 
+LABEL ha-proxy.haproxy "true"
+
 COPY . /app/
 WORKDIR /app/
 # Install wget and install/updates certificates
@@ -20,6 +22,8 @@ RUN wget --quiet https://github.com/jwilder/docker-gen/releases/download/$DOCKER
 ENV DOCKER_HOST unix:///tmp/docker.sock
 
 VOLUME ["/etc/haproxy/certs"]
+
+EXPOSE 80 443
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["docker-gen", "-config", "/app/docker-gen.conf"]
