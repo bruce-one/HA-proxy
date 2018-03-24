@@ -220,7 +220,7 @@ frontend http
     http-request deny deny_status 425 if { ssl_fc_has_early } !safe_method
     # ACME service
     acl acme_challenge path_beg /.well-known/acme-challenge/
-    {{ if $.Env.ACME_ENABLED }}
+    {{ if $.Env.ENABLE_ACME }}
     http-request use-service lua.acme-http01 if METH_GET acme_challenge
     {{ end }}
 
