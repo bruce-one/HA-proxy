@@ -1,5 +1,5 @@
 FROM haproxy:1.8-alpine
-LABEL maintainer="Max Sum max@lolyculture.com"
+LABEL maintainer="Max Sum <max@lolyculture.com>"
 
 COPY . /app/
 WORKDIR /app/
