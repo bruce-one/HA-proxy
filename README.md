@@ -179,7 +179,7 @@ HA-proxy provides a hook for ACME-compatible clients with http support. To enabl
 
 ### SSL Support (different from nginx-proxy)
 
-SSL is supported using single host, wildcard and SNI certificates using naming conventions forcertificates or optionally specifying a cert name (for SNI) as an environment variable.
+SSL is supported using single host, wildcard and SNI certificates using naming conventions forcertificates or optionally specifying a cert name (for SNI) as an environment variable. Set `https_method` label to `redirect`, `noredirect` or `nohttp` enable SSL support.
 
 To enable SSL:
 
@@ -273,18 +273,7 @@ Note that the `Mozilla-Old` policy should use a 1024 bits DH key for compatibili
 a 2048 bits key. The [Diffie-Hellman Groups](#diffie-hellman-groups) section details different methods of bypassing
 this, either globally or per virtual-host.
 
-The default behavior for the proxy when port 80 and 443 are exposed is as follows:
-
-* If a container has a usable cert, port 80 will redirect to 443 for that container so that HTTPS
-is always preferred when available.
-* If the container does not have a usable cert, a 503 will be returned.
-
-Note that in the latter case, a browser may get an connection error as no certificate is available
-to establish a connection.  A self-signed or generic cert named `default.crt` and `default.key`
-will allow a client browser to make a SSL connection (likely w/ a warning) and subsequently receive
-a 500.
-
-To serve traffic in both SSL and non-SSL modes without redirecting to SSL, you can include thelabel `ha-proxy.https_method=noredirect` (the default is `ha-proxy.https_method=redirect`).  You can also disable the non-SSL site entirely with `ha-proxy.https_method=nohttp`, or disable the HTTPS site with `ha-proxy.https_method=nohttps`. `ha-proxy.https_method` must be specified on each container for which you want to override the default behavior.  If `ha-proxy.https_method=noredirect` is used, Strict Transport Security (HSTS) is disabled to prevent HTTPS users from being redirected by the client.  If you cannot get to the HTTP site after changing this setting, your browser has probably cached the HSTS policy and is automatically redirecting you back to HTTPS.  You will need to clear your browser's HSTS cache or use an incognito window / different browser.
+You can choose from multiple methods. To redirect all request to SSL, you can set `ha-proxy.https_method=redirect` label (the default is `ha-proxy.https_method=nohttps`). If you want to serve traffic in both SSL and non-SSL modes without redirecting to SSL, you can include thelabel `ha-proxy.https_method=noredirect`.  You can also disable the non-SSL site entirely with `ha-proxy.https_method=nohttp`. `ha-proxy.https_method` must be specified on each container for which you want to enable SSL support.  If `ha-proxy.https_method=noredirect` is used, Strict Transport Security (HSTS) is disabled to prevent HTTPS users from being redirected by the client.  If you cannot get to the HTTP site after changing this setting, your browser has probably cached the HSTS policy and is automatically redirecting you back to HTTPS.  You will need to clear your browser's HSTS cache or use an incognito window / different browser.
 
 By default, [HTTP Strict Transport Security (HSTS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security) 
 is enabled with `max-age=31536000` for HTTPS sites.  You can disable HSTS with the label `ha-proxy.hsts=off` or use a custom HSTS configuration like `HSTS=max-age=31536000; includeSubDomains; preload`.  

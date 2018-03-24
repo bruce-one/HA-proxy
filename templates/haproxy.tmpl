@@ -60,8 +60,8 @@ defaults
 {{ end }}
 
 {{ define "frontend" }}
-    {{/* Get the HTTPS_METHOD defined by containers w/ the same vhost, falling back to "redirect" */}}
-    {{ $https_method := or (first (keys (groupByLabel .Containers "ha-proxy.https_method"))) "redirect" }}
+    {{/* Get the HTTPS_METHOD defined by containers w/ the same vhost, falling back to "nohttps" */}}
+    {{ $https_method := or (first (keys (groupByLabel .Containers "ha-proxy.https_method"))) "nohttps" }}
 
     {{/* Get the HSTS defined by containers w/ the same vhost, falling back to "max-age=31536000" */}}
     {{ $hsts := or (first (keys (groupByLabel .Containers "ha-proxy.hsts"))) "max-age=31536000" }}
@@ -214,12 +214,17 @@ backend bk_{{ $host_name }}
 
 frontend http
     mode http
+    {{ $has_https := eq 0 (len (whereLabelValueMatches $ "ha-proxy.https_method" "^(redirect|noredirect|nohttp)$")) }}
     {{ if $enable_ipv6 }}
         bind :::80 v4v6 tfo defer-accept
+        {{ if $has_https }}
         bind :::443 v4v6 tfo defer-accept ssl allow-0rtt alpn h2,http/1.1 npn h2,http/1.1 crt-list /etc/haproxy/certs.list
+        {{ end }}
     {{ else }}
         bind :80 tfo defer-accept
+        {{ if $has_https }}
         bind :443 tfo defer-accept ssl allow-0rtt alpn h2,http/1.1 npn h2,http/1.1 crt-list /etc/haproxy/certs.list
+        {{ end }}
     {{ end }}
     # Only safe method supported in 0rtt
     acl safe_method method GET HEADER CONNECT OPTIONS TRACE
