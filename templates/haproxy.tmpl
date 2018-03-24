@@ -82,7 +82,7 @@ defaults
     {{ $cert := (coalesce $certName $vhostCert) }}
 
     {{ $certExist := and $cert (or (exists (printf "/etc/haproxy/certs/%s" $cert)) (exists (printf "/etc/haproxy/certs/%s.ecdsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.rsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.dsa" $cert))) }}
-    {{ $is_https := (and (ne $https_method "nohttps") (ne $cert "") $certExist ) }}
+    {{ $is_https := (and (ne $https_method "nohttps") $certExist ) }}
     {{ $is_http  := ne $https_method "nohttp" }}
 
     {{/* Give a name to the host rules */}}
