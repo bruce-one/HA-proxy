@@ -8,7 +8,8 @@ RUN apk add --no-cache --virtual .run-deps \
     ca-certificates bash wget openssl \
     && update-ca-certificates \
     && mv /usr/local/etc/haproxy /etc/ \
-    && mv /app/haproxy.cfg /etc/haproxy/
+    && mv /app/haproxy.cfg /etc/haproxy/ \
+    && mv /app/acme-webroot.lua /etc/haproxy/
 
 ENV DOCKER_GEN_VERSION 0.7.3
 

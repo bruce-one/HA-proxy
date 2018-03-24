@@ -175,7 +175,7 @@ Finally, start your containers with `ha-proxy.host` label.
 
 ### SSL Support using letsencrypt (different from nginx-proxy)
 
-HA-proxy provides a hook for ACME-compatible clients. Any container that has the label `ha-proxy.acme-provider` set would receive requests for /.well-known/acme-challenge/ URL. ACME provider container could also set `ha-proxy.proto` and `ha-proxy.port` like normal ones.
+HA-proxy provides a hook for ACME-compatible clients with http support. To enable the support, define `ENABLE_ACME` environment variable to enable the hook and mount `/acme` in volume. The ACME client could then use the volume as webroot for HTTP validation.
 
 ### SSL Support (different from nginx-proxy)
 
@@ -355,4 +355,5 @@ See the table below
 | N/A                | Label.ha-proxy.connection     |
 | Env.ENABLE_IPV6    | Env.ENABLE_IPV6               |
 | Env.DEFAULT_HOST   | Env.DEFAULT_HOST              |
+| N/A                | Env.ENABLE_ACME               |
 
