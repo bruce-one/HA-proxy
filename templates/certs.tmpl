@@ -20,7 +20,7 @@
 {{/* Use the cert specified on the container or fallback to the best vhost match */}}
 {{ $cert := (coalesce $certName $vhostCert) }}
 {{/* ensure the cert exist */}}
-{{ $certExist := and $cert (or (exist (printf "/etc/haproxy/certs/%s" $cert)) (exist (printf "/etc/haproxy/certs/%s.ecdsa" $cert)) (exist (printf "/etc/haproxy/certs/%s.rsa" $cert)) (exist (printf "/etc/haproxy/certs/%s.dsa" $cert))) }}
+{{ $certExist := and $cert (or (exists (printf "/etc/haproxy/certs/%s" $cert)) (exists (printf "/etc/haproxy/certs/%s.ecdsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.rsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.dsa" $cert))) }}
 
 {{ if $certExist }}
     {{ if eq $ssl_policy "Mozilla-Modern" }}
