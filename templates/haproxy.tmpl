@@ -15,7 +15,6 @@ global
 defaults
     mode http
     log global
-    option http-server-close
     option httplog
     option dontlognull
     option redispatch
@@ -24,14 +23,15 @@ defaults
     balance roundrobin
     backlog 4096
     timeout client          1m
-    timeout client-fin      30s
-    timeout connect         5s
-    timeout server          30s
-    timeout tunnel          15m
-    timeout http-keep-alive 15s
-    timeout http-request    10s
-    timeout queue           5s
-    timeout tarpit          60s
+    timeout client-fin      10s
+    timeout connect         3s
+    timeout server          1m
+    timeout server-fin      5s
+    timeout tunnel          40m
+    timeout http-request    5s
+    timeout http-keep-alive 5m
+    timeout queue           15s
+    timeout tarpit          30s
     default-server inter 3s rise 2 fall 3
 
 {{ $CurrentContainer := whereLabelExists $ "ha-proxy.haproxy" | first }}
@@ -174,17 +174,12 @@ backend bk_{{ $host_name }}
     {{ if (eq $connection "keep-alive") }}
         # Keep-alive to backend service
         option http-keep-alive
-        timeout client          1m
-        timeout server          1m
-        timeout http-keep-alive 1m
     {{ else if (eq $connection "tunnel") }}
         option http-tunnel
+    {{ else if (eq $connection "server-close") }}
+        option http-server-close
     {{ else if (eq $connection "close") }}
         option httpclose
-        timeout client          15m
-        timeout client-fin      10s
-        timeout server          15m
-        timeout http-keep-alive 15m
     {{ end }}
 
     {{ range $container := $containers }}
