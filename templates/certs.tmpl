@@ -8,17 +8,17 @@
 {{ $certName := (first (keys (groupByLabel $containers "ha-proxy.cert_name"))) }}
 
 {{/* Get the best matching cert  by name for the vhost. */}}
+{{ $ecdsaCert := (closest (dir "/etc/haproxy/certs") (printf "%s.pem.ecdsa" $host))}}
+{{ $ecdsaCert := when (hasSuffix ".pem.ecdsa" $ecdsaCert) (trimSuffix ".ecdsa" $ecdsaCert) nil }}
+{{ $rsaCert := (closest (dir "/etc/haproxy/certs") (printf "%s.pem.rsa" $host))}}
+{{ $rsaCert := when (hasSuffix ".pem.rsa" $rsaCert) (trimSuffix ".rsa" $rsaCert) nil }}
+{{ $dsaCert := (closest (dir "/etc/haproxy/certs") (printf "%s.pem.dsa" $host))}}
+{{ $dsaCert := when (hasSuffix ".pem.dsa" $dsaCert) (trimSuffix ".dsa" $dsaCert) nil }}
 {{ $vhostCert := (closest (dir "/etc/haproxy/certs") (printf "%s.pem" $host))}}
-
-{{/* use bundling if multiple certs is found */}}
-{{ $vhostCert := trimSuffix ".ecdsa" $vhostCert }}
-{{ $vhostCert := trimSuffix ".rsa" $vhostCert }}
-{{ $vhostCert := trimSuffix ".dsa" $vhostCert }}
-{{/* ensure the cert ends with .pem */}}
 {{ $vhostCert := when (hasSuffix ".pem" $vhostCert) $vhostCert nil }}
 
 {{/* Use the cert specified on the container or fallback to the best vhost match */}}
-{{ $cert := (coalesce $certName $vhostCert) }}
+{{ $cert := (coalesce $certName $ecdsaCert $rsaCert $dsaCert $vhostCert) }}
 {{/* ensure the cert exist */}}
 {{ $certExist := and $cert (or (exists (printf "/etc/haproxy/certs/%s" $cert)) (exists (printf "/etc/haproxy/certs/%s.ecdsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.rsa" $cert)) (exists (printf "/etc/haproxy/certs/%s.dsa" $cert))) }}
 
