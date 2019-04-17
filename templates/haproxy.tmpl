@@ -1,14 +1,5 @@
 global
-    log /dev/log local0
-    ssl-default-bind-options ssl-min-ver TLSv1.0
-    ssl-default-bind-ciphers 'ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:!DSS'
-    tune.ssl.default-dh-param 2048
-    crt-base /etc/haproxy/certs
-    ca-base /etc/ssl/certs
-    {{ if (exists "/etc/haproxy/certs/dhparam.pem") }}
-    # Default dhparam
-    ssl-dh-param-file /etc/haproxy/certs/dhparam.pem
-    {{ end }}
+    log stdout  format raw  local0  info
 defaults
     mode http
     log global
@@ -59,7 +50,8 @@ defaults
 {{ $host := trim $host }}
 {{ $is_regexp := hasPrefix "~" $host }}
 {{ $is_suffix := hasPrefix "*" $host }}
-{{ $host_name := when $is_regexp (sha1 $host) (when $is_suffix (replace $host "*" "." 1) $host) }}
+{{ $is_prefix := hasSuffix "*" $host }}
+{{ $host_name := when $is_regexp (sha1 $host) (when $is_suffix (replace $host ".*" "" 1) (when $is_prefix (replace $host ".*" "" 1) $host)) }}
 
 # {{ $host_name }}
 {{/* Get the NETWORK_ACCESS defined by containers w/ the same vhost, falling back to "external" */}}
@@ -143,10 +135,8 @@ frontend http
     mode http
     {{ if $enable_ipv6 }}
     bind :::80 v4v6 tfo defer-accept
-    bind :::443 v4v6 tfo defer-accept ssl allow-0rtt alpn h2,http/1.1 npn h2,http/1.1 crt-list /etc/haproxy/certs.list
     {{ else }}
     bind :80 tfo defer-accept
-    bind :443 tfo defer-accept ssl allow-0rtt alpn h2,http/1.1 npn h2,http/1.1 crt-list /etc/haproxy/certs.list
     {{ end }}
     acl http  ssl_fc,not
     acl https ssl_fc
@@ -162,13 +152,15 @@ frontend http
     {{ $host := trim $host }}
     {{ $is_regexp := hasPrefix "~" $host }}
     {{ $is_suffix := hasPrefix "*" $host }}
-    {{ $host_name := when $is_regexp (sha1 $host) (when $is_suffix (replace $host "*" "." 1) $host) }}
+    {{ $is_prefix := hasSuffix "*" $host }}
+    {{ $host_name := when $is_regexp (sha1 $host) (when $is_suffix (replace $host "*" "." 1) (when $is_prefix (replace $host ".*" "" 1) $host)) }}
     # {{ $host_name }}
 
     {{ if eq $host $default_host }}
     ## Default host
     default_backend bk_{{ $host_name }}
     {{ end }}
+    {{ $host := trimSuffix "*" $host }}
 
     {{/* Get the HTTPS_METHOD defined by containers w/ the same vhost, falling back to "redirect" */}}
     {{ $https_method := or (first (groupByKeys $containers "Env.HTTPS_METHOD")) "redirect" }}
@@ -193,6 +185,11 @@ frontend http
     acl host_{{ $host_name }} hdr_end(Host) -i {{ trimPrefix "*" $host }}
     {{ if $is_https }}
     acl host_{{ $host_name }}_sni ssl_fc_sni_end -i {{ trimPrefix "*" $host }}
+    {{ end }}
+    {{ else if $is_prefix }}
+    acl host_{{ $host_name }} hdr_beg(Host) -i {{ trimSuffix "*" $host }}
+    {{ if $is_https }}
+    acl host_{{ $host_name }}_sni ssl_fc_sni_beg -i {{ trimSuffix "*" $host }}
     {{ end }}
     {{ else }}
     acl host_{{ $host_name }} hdr(Host) -i {{ $host }}

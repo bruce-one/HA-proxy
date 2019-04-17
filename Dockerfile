@@ -1,4 +1,4 @@
-FROM haproxy:1.8-alpine
+FROM haproxy:1.9-alpine
 LABEL maintainer="Max Sum max@lolyculture.com"
 
 # Install wget and install/updates certificates
